@@ -108,14 +108,14 @@ class App:
 
     def get_ini_data(self) -> list:
 
-        self.confData = Config.set_conf_ini_conf(self.appPath,self.__conf_file__)
+        self.confData = Config.create_ini_files(self.appPath,self.__conf_file__)
         return self.confData
 
 
     def make_ini_files(self) -> str:
 #         self.get_ini_data()
         self.appPath = os.path.join(self.cwd,self.appName)
-        self.ini_file_list = Config.set_conf_ini_conf(
+        self.ini_file_list = Config.create_ini_files(
             reza_cwd=self.cwd,
             app_name=self.appName,
             app_path=self.appPath,
@@ -215,10 +215,12 @@ class Config(ConfigParser):
             print(traceback.format_exc())
             return None
 
-    def set_conf_ini_conf(reza_cwd,
-                          app_name,
-                          app_path,
-                          conf_file) -> list:
+#     def set_conf_ini_conf(
+    def create_ini_files(
+        reza_cwd,
+        app_name,
+        app_path,
+        conf_file) -> list:
 
         _config_list=[]
         _ini_conf_file_list = []
@@ -263,8 +265,10 @@ class Config(ConfigParser):
                 _pkg_list=[]
                 for pkg in _mod_pkgs:
                     _pkg_path = os.path.join(_modules_path,module,pkg)
+                    if not os.path.isdir(_pkg_path):
+                        os.makedirs(_pkg_path)
                     ''' create the __init__ file with python header '''
-                    with open(os.path.join(_pkg_path,'__init__.py'),"w") as f:
+                    with open(os.path.join(_pkg_path,'__init__.py'),"w+") as f:
                         f.write("#!/usr/bin/env python3\n# -*- coding: UTF-8 -*-")
                     f.close()
 
@@ -336,7 +340,8 @@ class Config(ConfigParser):
                         _ini_conf.set("LOGGER",'FORMAT',str(log_format))
 
                     ''' write ini data to file '''
-                    if len(_pkg_list) > 0:
+#                     if len(_pkg_list) > 0:
+                    if len(_ini_conf) > 0:
 #                         _modules_list.append({pkg:_pkg_list})
                         _ini_conf.write(_ini_conf_file)
                         _ini_conf_file_list.append(str(ini_file_path))
@@ -345,8 +350,8 @@ class Config(ConfigParser):
 #                 _config_list.append({module:_modules_list})
 
         except Exception as e:
-            print("Error set_conf_ini_conf {0} with error:\n{1}".format(__package__,e))
-            print(traceback.format_exc())
+            print("** [Error] create_ini_files {0} with error:\n{1}".format(__package__,e))
+#             print(traceback.format_exc())
 
         return [*set(_ini_conf_file_list)]
 
@@ -388,7 +393,7 @@ class Config(ConfigParser):
                 conf_data.write(configfile)
 
         except Exception as e:
-            print("Error set_conf_ini_conf {0} with error:\n{1}".format(__package__,e))
+            print("Error create_ini_files {0} with error:\n{1}".format(__package__,e))
             print(traceback.format_exc())
 
         return _new_conf_file
