@@ -53,7 +53,7 @@ class RollingStats():
     """
 
 
-    def __init__(self, desc : str="data", **kwargs):
+    def __init__(self, desc : str="rollingstats", **kwargs):
 
         self.__name__ = __name__
         self.__package__ = __package__
@@ -61,7 +61,6 @@ class RollingStats():
         self.__app__ = __app__
         self.__ini_fname__ = __ini_fname__
         self.__desc__ = desc
-        __s_fn_id__ = "__init__"
         
         self._session = None   # spark session property
         self._data = None    # dataframe property
