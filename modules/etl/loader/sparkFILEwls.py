@@ -2,10 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "FileWorkLoads"
+__name__ = "sparkFILEwls"
 __module__ = "etl"
 __package__ = "loader"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -19,15 +19,13 @@ try:
     import functools
     import findspark
     findspark.init()
-#     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
     from pyspark.sql.functions import lit, current_timestamp
-#     from pyspark import SparkContext, SparkConf
     from pyspark.sql import DataFrame
-    import boto3   # handling AWS S3 
     from google.cloud import storage   # handles GCS reads and writes
     import pandas as pd
     import numpy as np
     import json
+#     import boto3   # handling AWS S3 
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -108,43 +106,34 @@ class FileWorkLoads():
         ]
 
         ''' Initialize spark session parameters '''
-        self._homeDir = None   # spark $SPARK_HOME dir path property required for sessions
-        self._binDir = None    # spark $SPARK_BIN dir path property required for sessions
-        self._config = None    # spark .conf option property
-        self._jarDir = None    # spark JAR files dir path property
-        self._appName = None   # spark appName property with a valid string
-        self._master = None    # spark local[*], meso, or yarn property 
-        self._rwFormat = None  # spark read/write formats (jdbc, csv,json, text) property
-        self._session = None   # spark session is set based on the storeMode property
-        self._context = None   # spark context is set to support Hadoop & authentication
-        self._saveMode = None  # spark write append/overwrite save mode property
-
-        __s_fn_id__ = "__init__"
+        self._homeDir= None   # spark $SPARK_HOME dir path property required for sessions
+        self._binDir = None   # spark $SPARK_BIN dir path property required for sessions
+        self._config = None   # spark .conf option property
+        self._jarDir = None   # spark JAR files dir path property
+        self._appName= None   # spark appName property with a valid string
+        self._master = None   # spark local[*], meso, or yarn property 
+        self._rwFormat=None   # spark read/write formats (jdbc, csv,json, text) property
+        self._session =None   # spark session is set based on the storeMode property
+        self._context =None   # spark context is set to support Hadoop & authentication
+        self._saveMode=None   # spark write append/overwrite save mode property
 
         ''' initiate to load app.cfg data '''
         global logger
         global pkgConf
         global appConf
 
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
+
         try:
             self.cwd=os.path.dirname(__file__)
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,__ini_fname__))
 
-            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            self.rezHome = pkgConf.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
-            from rezaware import Logger as logs
-
-            ''' Set the wrangler root directory '''
-            self.pckgDir = pkgConf.get("CWDS",self.__package__)
-            self.appDir = pkgConf.get("CWDS",self.__app__)
-            ''' get the path to the input and output data '''
-            self.dataDir = pkgConf.get("CWDS","DATA")
-
-            appConf = configparser.ConfigParser()
-            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
             ''' innitialize the logger '''
+            from rezaware.utils import Logger as logs
             logger = logs.get_logger(
                 cwd=self.rezHome,
                 app=self.__app__, 
@@ -154,6 +143,15 @@ class FileWorkLoads():
             ''' set a new logger section '''
             logger.info('########################################################')
             logger.info("%s %s",self.__name__,self.__package__)
+
+            ''' Set the wrangler root directory '''
+            self.pckgDir = pkgConf.get("CWDS",self.__package__)
+            self.appDir = pkgConf.get("CWDS",self.__app__)
+            ''' get the path to the input and output data '''
+            self.dataDir = pkgConf.get("CWDS","DATA")
+
+            appConf = configparser.ConfigParser()
+            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
             ''' get tmp storage location '''
             self.tmpDIR = None
@@ -1399,7 +1397,7 @@ class FileWorkLoads():
             ''' create a tmp folder to stage the file before writing to file path '''
             _tmp_folder_path = os.path.join(self.dataDir,"tmp")
             if not os.path.exists(_tmp_folder_path):
-                os.makedir(_tmp_folder_path)
+                os.makedirs(_tmp_folder_path)
                 logger.debug("Created a new tmp folder %s",_tmp_folder_path)
             else:
                 logger.debug("%s tmp folder exists",_tmp_folder_path)

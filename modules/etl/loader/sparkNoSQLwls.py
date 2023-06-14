@@ -5,7 +5,7 @@
 __name__ = "sparkNoSQLwls"
 __module__ = "etl"
 __package__ = "loader"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -121,9 +121,19 @@ class NoSQLWorkLoads():
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,__ini_fname__))
 
-            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            self.rezHome = pkgConf.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
-            from rezaware import Logger as logs
+            ''' initialize the logger '''
+            from rezaware.utils import Logger as logs
+            logger = logs.get_logger(
+                cwd=self.rezHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info("%s Class %s Package",self.__name__,self.__package__)
 
             ''' Set the wrangler root directory '''
             self.pckgDir = pkgConf.get("CWDS",self.__package__)
@@ -134,16 +144,6 @@ class NoSQLWorkLoads():
             appConf = configparser.ConfigParser()
             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
-            ''' initialize the logger '''
-            logger = logs.get_logger(
-                cwd=self.rezHome,
-                app=self.__app__, 
-                module=self.__module__,
-                package=self.__package__,
-                ini_file=self.__ini_fname__)
-            ''' set a new logger section '''
-            logger.info('########################################################')
-            logger.info("%s Class %s Package",self.__name__,self.__package__)
             logger.debug("%s initialization for %s module package %s %s done. Starting workloads: %s."
                          %(self.__app__.upper(),
                            self.__module__.upper(),

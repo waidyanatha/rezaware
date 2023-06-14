@@ -4,7 +4,7 @@
 __name__ = "graphClustering"
 __package__ = "cluster"
 __module__ = "ml"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -75,7 +75,7 @@ class CommunitiesWorkLoads():
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,self.__ini_fname__))
 
-            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            self.rezHome = pkgConf.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
             
             self.pckgDir = pkgConf.get("CWDS",self.__package__)
@@ -88,7 +88,7 @@ class CommunitiesWorkLoads():
 #             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
             
             ''' innitialize the logger '''
-            from rezaware import Logger as logs
+            from rezaware.utils import Logger as logs
             logger = logs.get_logger(
                 cwd=self.rezHome,
                 app=self.__app__, 
@@ -101,8 +101,8 @@ class CommunitiesWorkLoads():
             logger.info("%s Class",self.__name__)
 
             ''' import file work load utils to read and write data '''
-            from utils.modules.etl.load import filesRW as rw
-            clsRW = rw.FileWorkLoads(desc=self.__desc__)
+            from rezaware.modules.etl.loader import sparkFILEwls as sf
+            clsRW = sf.FileWorkLoads(desc=self.__desc__)
             clsRW.storeMode = pkgConf.get("DATASTORE","MODE")
             clsRW.storeRoot = pkgConf.get("DATASTORE","ROOT")
             logger.info("Files RW mode %s with root %s set",clsRW.storeMode,clsRW.storeRoot)
@@ -121,7 +121,7 @@ class CommunitiesWorkLoads():
 
             ''' import mongo work load utils to read and write data '''
 #             from utils.modules.etl.load import noSQLwls as nosql
-            from utils.modules.etl.load import sparkNoSQLwls as nosql
+            from rezaware.modules.etl.loader import sparkNoSQLwls as nosql
             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
             
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
@@ -135,15 +135,7 @@ class CommunitiesWorkLoads():
                 if self.tmpDIR = None then data is not stored, otherwise stored to
                 given location; typically specified in app.conf
             '''
-            self.tmpDIR = None
-            if "WRITE_TO_TMP":
-                self.tmpDIR = os.path.join(self.storePath,"tmp/")
-                if not os.path.exists(self.tmpDIR):
-                    os.makedirs(self.tmpDIR)
 
-            self.scrape_start_date = date.today()
-            self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
-            self.scrapeTimeGap = 30
             print("%s Class initialization complete" % self.__name__)
 
         except Exception as err:

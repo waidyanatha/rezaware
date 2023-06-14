@@ -11,6 +11,7 @@ nohup.out
 .git/*
 ### UTILS ###
 ###
+notebooks/ml/timeseries/.ipynb_checkpoints/
 rezaware/__pycache__/*
 rezaware/logs/*
 

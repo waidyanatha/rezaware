@@ -5,7 +5,7 @@
 __name__ = "RollingStats"
 __module__ = "ml"
 __package__ = "timeseries"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
@@ -42,8 +42,8 @@ class RollingStats():
     
     We implement pyspark to perform the rolling average and standard devition. When the
     class is instantiated, it will inherit properties and methods from packages 
-    (1) utils/etl/load/sparkwls - to read/write data from SQL/NoSQL DBs and CVS/JSON files
-    (2) utils/etl/load/filesrw - to read/write files stored in local, remote, or cloud storage
+    (1) rezaware/etl/load/sparkwls - to read/write data from SQL/NoSQL DBs and CVS/JSON files
+    (2) rezaware/etl/load/filesrw - to read/write files stored in local, remote, or cloud storage
     (3) rezaware - application specific configuration and logging functions
     
     contributors:
@@ -87,10 +87,10 @@ class RollingStats():
             config = configparser.ConfigParser()
             config.read(os.path.join(self.cwd,__ini_fname__))
 
-            self.rezHome = config.get("CWDS","REZAWARE")
+            self.rezHome = config.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
 
-            from rezaware import Logger as logs
+            from rezaware.utils import Logger as logs
             ''' innitialize the logger '''
             logger = logs.get_logger(
                 cwd=self.rezHome,
@@ -103,7 +103,7 @@ class RollingStats():
             logger.info("%s %s",self.__name__,self.__package__)
 
             ''' initialize util class to use common functions '''
-            from utils.modules.lib.spark import execSession as session
+            from rezaware.modules.lib.spark import execSession as session
             clsSpark = session.Spawn(desc=self.__desc__)
 #             if clsSparkWL.session is None:
 #                 clsSparkWL.session = {}

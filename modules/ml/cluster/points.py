@@ -4,7 +4,7 @@
 __name__ = "ClusterWorkLoads"
 __package__ = "cluster"
 __module__ = "ml"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -103,9 +103,21 @@ class ClusterWorkLoads():
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,self.__ini_fname__))
 
-            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            self.rezHome = pkgConf.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
             
+            ''' innitialize the logger '''
+            from rezaware.utils import Logger as logs
+            logger = logs.get_logger(
+                cwd=self.rezHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info("%s Class",self.__name__)
+
             self.pckgDir = pkgConf.get("CWDS",self.__package__)
             self.appDir = pkgConf.get("CWDS",self.__app__)
 #             ''' DEPRECATED: get the path to the input and output data '''
@@ -115,19 +127,6 @@ class ClusterWorkLoads():
 #             appConf = configparser.ConfigParser()
 #             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
             
-            ''' innitialize the logger '''
-            from rezaware import Logger as logs
-            logger = logs.get_logger(
-                cwd=self.rezHome,
-                app=self.__app__, 
-                module=self.__module__,
-                package=self.__package__,
-                ini_file=self.__ini_fname__)
-
-            ''' set a new logger section '''
-            logger.info('########################################################')
-            logger.info("%s Class",self.__name__)
-
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
                            self.__module__,

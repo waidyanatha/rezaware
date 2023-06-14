@@ -4,7 +4,7 @@
 ''' Function --- LOGGER ---
     author: <nuwan.waidyanatha@rezgateway.com>
 '''
-def config_app(
+def build_app_struct(
     proj_dir= None,
     app:str = "rezaware",
     cfile:str="app.cfg",
@@ -18,12 +18,12 @@ def config_app(
     Returns:
         conf_files (list) absolute path of all .cfg and .ini files 
     """
-    __s_fn_id__ = f"{__name__} function <config_app>"
+    __s_fn_id__ = f"{__name__} function <build_app_struct>"
     __def_app_dir_list__ = ['dags','data','db','logs','modules','notebooks','tests']
 
     try:
         if proj_dir is None or "".join(proj_dir.split())=="":
-            proj_dir = os.path.abspath(os.path.join(cwd, os.pardir))            
+            proj_dir = os.path.abspath(os.pardir)
         if app.lower() not in __apps_list__:
             raise AttributeError("Invalid app name %s,must be one of %s"
                                  %(app.upper(),str(__apps_list__)))
@@ -32,11 +32,13 @@ def config_app(
         _app_path = os.path.join(proj_dir,app.lower())
         if not os.path.isdir(_app_path):
             os.makedirs(_app_path)
+            logger.warning("%s app dir unaivalable; created new %s dir: %s",
+                         __s_fn_id__,app.upper(),_app_path)
         if not os.path.exists(os.path.join(_app_path,cfile)):
             ''' create default cfg file '''
             shutil.copy(os.path.join(proj_dir,"rezaware","000_defaults",app.lower(),cfile.lower()),
                         os.path.join(_app_path,cfile.lower()))
-            logger.debug("%s copying default %s to %s",__s_fn_id__,cfile.upper(),_app_path)
+            logger.debug("%s copyied default %s to %s",__s_fn_id__,cfile.upper(),_app_path)
 
         ''' setup default app director structure '''
         for _app_dir in __def_app_dir_list__:
@@ -58,7 +60,7 @@ def config_app(
 ''' Function --- LOGGER ---
     author: <nuwan.waidyanatha@rezgateway.com>
 '''
-def get_logger(
+def get_logger_handle(
     cwd:str=None,
     folder_path:str="logs",
     file_name:str="app.log",
@@ -71,7 +73,7 @@ def get_logger(
     Returns:
         logger (logger) object
     """
-    __s_fn_id__ = f"{__name__} function <get_logger>"
+    __s_fn_id__ = f"{__name__} function <get_logger_handle>"
 
     __def_log_form__ = '[%(levelname)s] - %(asctime)s - %(name)s - %(message)s'
     
@@ -136,10 +138,8 @@ def main():
     try:
         cwd=os.path.dirname(__file__)
         sys.path.insert(1,cwd)
-#         from rezaware import Logger as logs
-        from rezaware import Config as conf
         ''' innitialize the logger '''
-        logger = get_logger(
+        logger = get_logger_handle(
             cwd=cwd,
             folder_path="logs",
             file_name = "app.log",
@@ -148,6 +148,9 @@ def main():
         logger.info('########################################################')
         logger.info("Initializing Main in %s",__name__)
 
+#         from rezaware import Logger as logs
+#         utils = __import__('000_utils')
+        from utils import Config as conf
         ''' get args from command line '''
         parser = argparse.ArgumentParser(description="setup main controller arg and flags")
         parser.add_argument("--apps", type=str)
@@ -164,11 +167,12 @@ def main():
                            __s_fn_id__,_app_set)
 
         ''' get the parent folder '''
-        parent_dir = os.path.abspath(os.path.join(cwd, os.pardir))
+#         parent_dir = os.path.abspath(os.path.join(cwd, os.pardir))
+        parent_dir=os.path.abspath(os.pardir)
         ''' setup and configure the four main apps with ini files '''
         for _app in _app_set:
             try:
-                _app_conf = config_app(
+                _app_conf = build_app_struct(
                     proj_dir=parent_dir,
                     app = _app,
                     cfile=__conf_fname__,

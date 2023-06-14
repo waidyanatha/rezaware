@@ -77,6 +77,7 @@ gast=0.4.0
 google-auth=2.12.0
 google-auth-oauthlib=0.5.0
 google-pasta=0.2.0
+google-cloud-storage
 graphene=3.1
 graphql-core=3.2.1
 graphql-relay=3.2.0

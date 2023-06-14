@@ -4,7 +4,7 @@
 __name__ = "BOWwokrkLoads" # bag of words workloads
 __package__ = "natlang"    # natural language processing
 __module__ = "ml"   # machine learning
-__app__ = "utils"   # rezaware utils
+__app__ = "rezaware"   # rezaware utils
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -77,9 +77,10 @@ class BOWwokrkLoads():
         global pkgConf
         global appConf
         global logger
-        global clsSDB
-        global clsSCNR
-        global clsNoSQL
+#         global clsSDB
+#         global clsSCNR
+#         global clsNoSQL
+        global clsSFile
 
         __s_fn_id__ = f"{self.__name__} function <__init__>"
         
@@ -88,24 +89,23 @@ class BOWwokrkLoads():
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,__ini_fname__))
 
-            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            self.rezHome = pkgConf.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
 
             ''' innitialize the logger '''
-            from rezaware import Logger as logs
+            from rezaware.utils import Logger as logs
             logger = logs.get_logger(
                 cwd=self.rezHome,
                 app=self.__app__, 
                 module=self.__module__,
                 package=self.__package__,
                 ini_file=self.__ini_fname__)
-
             ''' set a new logger section '''
             logger.info('########################################################')
             logger.info("%s Class",self.__name__)
 
             ''' import spark database work load utils to read and write data '''
-            from utils.modules.etl.loader import sparkFILEwls as sFile
+            from rezaware.modules.etl.loader import sparkFILEwls as sFile
             clsSFile = sFile.FileWorkLoads(desc=self.__desc__)
             ''' import spark clean-n-rich work load utils to transform the data '''
 

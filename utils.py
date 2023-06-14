@@ -217,10 +217,11 @@ class Config(ConfigParser):
 
 #     def set_conf_ini_conf(
     def create_ini_files(
-        reza_cwd,
-        app_name,
-        app_path,
-        conf_file) -> list:
+        reza_cwd :str,
+        app_name :str,
+        app_path :str,
+        conf_file:str,
+    ) -> list:
 
         _config_list=[]
         _ini_conf_file_list = []
@@ -280,7 +281,8 @@ class Config(ConfigParser):
                     _ini_conf = ConfigParser()
                     ''' add the current package working directory path '''
                     _ini_conf.add_section("CWDS")
-                    _ini_conf.set("CWDS",str("rezaware"), str(reza_cwd))
+#                     _ini_conf.set("CWDS",str("rezaware"), str(reza_cwd))
+                    _ini_conf.set("CWDS",str("project"), str(reza_cwd))
                     _ini_conf.set("CWDS",str(app_name), str(app_path))
                     _ini_conf.set("CWDS",str(module), str(_mod_path))
                     _ini_conf.set("CWDS",str(pkg), str(_pkg_path))
@@ -457,7 +459,13 @@ class Logger():
         return _log_fpath
 
     
-    def get_logger(cwd:str,app:str, module:str, package:str, ini_file:str):
+    def get_logger(
+        cwd:str,
+        app:str, 
+        module:str, 
+        package:str, 
+        ini_file:str
+    ):
 
         ''' TODO logging.formatter string is hard coded until the error
             can be resolved with getting format string from app.ini'''

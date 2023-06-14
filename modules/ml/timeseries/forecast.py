@@ -5,7 +5,7 @@
 __name__ = "ForecastModels"
 __module__ = "ml"
 __package__ = "timeseries"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
@@ -85,7 +85,7 @@ class ForecastModels():
             config = configparser.ConfigParser()
             config.read(os.path.join(self.cwd,__ini_fname__))
 
-            self.rezHome = config.get("CWDS","REZAWARE")
+            self.rezHome = config.get("CWDS","PROJECTS")
             sys.path.insert(1,self.rezHome)
 
             from rezaware import Logger as logs
@@ -101,7 +101,7 @@ class ForecastModels():
             logger.info("%s %s",self.__name__,self.__package__)
 
             ''' initialize util class to use common functions '''
-            from utils.modules.lib.spark import execSession as session
+            from rezaware.modules.lib.spark import execSession as session
             clsSpark = session.Spawn(desc=self.__desc__)
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."

@@ -5,7 +5,7 @@
 __name__ = "execSession"
 __module__ = "lib"
 __package__ = "spark"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -19,14 +19,10 @@ try:
     import functools
     import findspark
     findspark.init()
-#     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
     from pyspark.sql.functions import lit, current_timestamp
-#     from pyspark import SparkContext, SparkConf
     from pyspark.sql import DataFrame
     import boto3   # handling AWS S3 
     from google.cloud import storage   # handles GCS reads and writes
-#     import pandas as pd
-#     import numpy as np
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -94,10 +90,20 @@ class Spawn():
             self.cwd=os.path.dirname(__file__)
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,__ini_fname__))
-
-            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            self.rezHome = pkgConf.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
-            from rezaware import Logger as logs
+
+            ''' innitialize the logger '''
+            from rezaware.utils import Logger as logs
+            logger = logs.get_logger(
+                cwd=self.rezHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info("%s %s",self.__name__,self.__package__)
 
             ''' Set the wrangler root directory '''
             self.pckgDir = pkgConf.get("CWDS",self.__package__)
@@ -108,17 +114,6 @@ class Spawn():
             appConf = configparser.ConfigParser()
             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
-            ''' innitialize the logger '''
-            logger = logs.get_logger(
-                cwd=self.rezHome,
-                app=self.__app__, 
-                module=self.__module__,
-                package=self.__package__,
-                ini_file=self.__ini_fname__)
-            ''' set a new logger section '''
-            logger.info('########################################################')
-            logger.info("%s %s",self.__name__,self.__package__)
-        
 #         ''' get tmp storage location '''
 #         self.tmpDIR = None
 #         if "WRITE_TO_FILE" in kwargs.keys():

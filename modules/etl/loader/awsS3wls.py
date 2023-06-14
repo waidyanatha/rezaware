@@ -5,7 +5,7 @@
 __name__ = "awsS3wls"
 __module__ = "etl"
 __package__ = "load"
-__app__ = "utils"
+__app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -74,20 +74,10 @@ class AWSS3WorkLoads():
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,__ini_fname__))
 
-            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            self.rezHome = pkgConf.get("CWDS","PROJECT")
             sys.path.insert(1,self.rezHome)
-            from rezaware import Logger as logs
-
-            ''' Set the wrangler root directory '''
-            self.pckgDir = pkgConf.get("CWDS",self.__package__)
-            self.appDir = pkgConf.get("CWDS",self.__app__)
-            ''' get the path to the input and output data '''
-            self.dataDir = pkgConf.get("CWDS","DATA")
-
-            appConf = configparser.ConfigParser()
-            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
-
             ''' innitialize the logger '''
+            from rezaware.utils import Logger as logs
             logger = logs.get_logger(
                 cwd=self.rezHome,
                 app=self.__app__, 
@@ -97,6 +87,15 @@ class AWSS3WorkLoads():
             ''' set a new logger section '''
             logger.info('########################################################')
             logger.info("%s %s",self.__name__,self.__package__)
+
+            ''' Set the wrangler root directory '''
+            self.pckgDir = pkgConf.get("CWDS",self.__package__)
+            self.appDir = pkgConf.get("CWDS",self.__app__)
+            ''' get the path to the input and output data '''
+            self.dataDir = pkgConf.get("CWDS","DATA")
+
+            appConf = configparser.ConfigParser()
+            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
             ''' get tmp storage location '''
             self.tmpDIR = None
