@@ -6,15 +6,15 @@
 '''
 def config_app(
     proj_dir= None,
-    app:str = "utils",
+    app:str = "rezaware",
     cfile:str="app.cfg",
 ):
     """
     Description:
-        Configure the wrangler, utils, mining, and visuals apps
+        Configure the rezaware, wrangler, mining, and visuals apps
         If the apps (i.e., folders) don't exist, then it the process will create them
     Attributes:
-        app (str) the name of the app wrangler, utils, mining, or visuals
+        app (str) the name of the app wrangler, rezaware, mining, or visuals
     Returns:
         conf_files (list) absolute path of all .cfg and .ini files 
     """
@@ -34,7 +34,7 @@ def config_app(
             os.makedirs(_app_path)
         if not os.path.exists(os.path.join(_app_path,cfile)):
             ''' create default cfg file '''
-            shutil.copy(os.path.join(proj_dir,"utils","000_defaults",app.lower(),cfile.lower()),
+            shutil.copy(os.path.join(proj_dir,"rezaware","000_defaults",app.lower(),cfile.lower()),
                         os.path.join(_app_path,cfile.lower()))
             logger.debug("%s copying default %s to %s",__s_fn_id__,cfile.upper(),_app_path)
 
@@ -209,10 +209,10 @@ if __name__ == "__main__":
     __name__ = "setup"
     __module__ = ""
     __package__ = ""
-    __app__ = "utils"
+    __app__ = "rezaware"
     __ini_fname__ = "app.ini"
     __conf_fname__ = "app.cfg"
-    __apps_list__ = ['utils','wrangler','visuals','mining']
+    __apps_list__ = ['rezaware','wrangler','visuals','mining']
 
     ''' Load necessary and sufficient python librairies that are used throughout the class'''
     try:

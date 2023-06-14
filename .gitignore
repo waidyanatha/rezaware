@@ -8,9 +8,9 @@ DEPRECATED_
 __pycache__
 .ipynb_checkpoints
 nohup.out
-
+.git/*
 ### UTILS ###
 ###
-utils/__pycache__/*
-utils/logs/*
+rezaware/__pycache__/*
+rezaware/logs/*
 
