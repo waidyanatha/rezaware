@@ -2,7 +2,7 @@
 
 ![Reservation Gateway](./img/rezgate_logo.png?raw=true "RezGateway")
 
-The README file is intended for Rezgateway affiilates working on rezAWARE projects. It povides an introduction to getting started with the available tools and code. Thereafter, refer to the WIKI for complete documentation on the system's components, and interfaces.
+The README file is useful for projects that are using __rezaware__ platform for AI/ML and augmented BI pipelines. Here we introduce ways for getting started with the platform framework. Thereafter, refer to the WIKI for complete documentation on the rezaware components, and interfaces.
 
 __Wiki__ 
 
