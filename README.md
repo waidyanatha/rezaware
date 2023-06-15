@@ -18,20 +18,30 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
    * ```git clone https://github.com/<my_git_user_name>/MyNewProj.git```
 4. Move into the newly created project folder
    * ```cd ~/all_rez_projects/MyNewProj```
-5. Now clone rezaware platform as a [submodule](https://github.blog/2016-02-01-working-with-submodules/)
-   * ```git submodule add https://github.com/waidyanatha/rezaware.git rezaware```
-6. Navigate into the rezaware folder and run setup to initialize the project
+5. Now clone and initialize rezaware platform as a [submodule](https://github.blog/2016-02-01-working-with-submodules/)
+   * ```git submodule add -b main https://github.com/waidyanatha/rezaware.git rezaware```
+   * ```git submodule init```; will copy the mapping from the .gitmodules file into the local _./.git/config_ file
+6. Navigate into the rezaware folder and run setup to initialize the project with AI/ML functional app classes
    * ```cd rezaware```
-   * In the next command, 
+   * In the next command ```python3 -m 000_setup --with_ini_files```, 
       - it is important to use the _--with_ini_files_ directive flag. 
       - This instructs _000_setup.py_ to build the _wrangler_, _mining_, and visuals folders structure
-      - and the respective python __init.py__ and __app.ini__
+      - and the respective python __init.py__ and __app.ini__ files necessary for the seamless package integration
       - execute ```python3 -m 000_setup --with_ini_files```
-   * You have now created your _MyNewProj_ with the _rezaware_ platform framework. 
-1. Change back to the project director to push the code
+   * You have now created your _MyNewProj_ with the _rezaware_ platform framework.
+1. Change back to the project director
    * ```cd ..``` or ```cd ~/all_rez_projects/MyNewProj```
-   * add a _README.md_ file, if not already
-
+1. Add the submodule and initialize
+   * ```git add .gitmodules rezaware/```
+   * ```git init```
+1. (Optional) Include a _README.md_ file, if not already
+   * ```echo "# Welcome to MyNewProj" >> README.md
+1. Add and commit all newly created files and folders in _MyNewProj_
+   * ```git add .```
+   * ```git commit -m "added rezaware submudle and setup project"
+1. Push the submodule and new commits to the repo
+   * ```git push origin main```
+   * Check your github project in the browser; you will see a folder ___rezaware @ xxxxxxx___; where xxxxxxx is the last 7 digits from the _rezaware.git_ repo commit code 
 
 ## Introduction
 
