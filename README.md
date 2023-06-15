@@ -1,6 +1,6 @@
 # rezAWARE
 
-![Reservation Gateway](./img/rezgate_logo.png?raw=true "RezGateway") 
+<img align="left" width="80" height="80" src="./img/rezgate_logo.png">
 
 The README file is useful for projects that are using __rezaware__ platform for AI/ML and augmented BI pipelines. It is designed to integrate data wrangling, mining, and visualization in to a single coherent project. Here we introduce ways for getting started with the platform framework. The [WIKI](/wiki) for comprehensive documentation on the rezaware methodology, functional components, and behaviour.
 
@@ -9,8 +9,8 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 ## Table of Content
 * [Starting a new project](#starting-a-new-project) - starting the _rezaware_ framework 
 * [Test the newly set project](#test-the-new-project) - run pytest scripts to ensure _rezaware_ integrity
-* [Re-configuring an existing project]()
-* [Description of the project artifacts](#about-the-post-setup-artifacts)
+* [Re-configuring an existing project](#reconfiguring-existing-project) - redoing the folders, init, and app.ini files
+* [Description of the project artifacts](#about-the-post-setup-artifacts) - brief description of the essential framework files and folders
 
 ## Starting a New Project
 1. Create an empty git repository with the a desired project name; e.g., __MyNewProj__ . 
@@ -56,7 +56,8 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 Run __pytest__ by executing the command in your terminal prompt
 * ```pytest```
 
-## Re-configuring existing project
+## Reconfiguring existing project
+
 When you add a new module package into the _mining_, _wrangler_, and _visuals_ app folders; as well as defining them in the _app.cfg_ file, the ___init___ and ___app.ini___ framework files need to be updated. For such simply run the _000_setup.py_
 * ```cd ~/all_rez_projects/MyNewProj/rezaware``` navigate into the _rezaware_ folder
 * ```python3 -m 000_setup --with_ini_files``` will re-configure all the apps
