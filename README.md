@@ -1,10 +1,37 @@
 # rezAWARE
 
-![Reservation Gateway](./img/rezgate_logo.png?raw=true "RezGateway")
+![Reservation Gateway](./img/rezgate_logo.png?raw=true "RezGateway") 
 
-The README file is useful for projects that are using __rezaware__ platform for AI/ML and augmented BI pipelines. Here we introduce ways for getting started with the platform framework. Thereafter, refer to the WIKI for complete documentation on the rezaware components, and interfaces.
+The README file is useful for projects that are using __rezaware__ platform for AI/ML and augmented BI pipelines. It is designed to integrate data wrangling, mining, and visualization in to a single coherent project. Here we introduce ways for getting started with the platform framework. The [WIKI](/wiki) for comprehensive documentation on the rezaware methodology, functional components, and behaviour.
 
-__Wiki__ 
+__NOTE__: instructions and content is specific to Debian distros and was tested on Ubuntu 20.04.
+
+## Starting a New Project
+1. Create an empty git repository with the a desired project name; e.g., __MyNewProj__ . 
+   * Presupose that you have [git installed and initialized](https://phoenixnap.com/kb/how-to-install-git-on-ubuntu) on your computer.
+   * You may also consider [setting up an Anaconda environment](https://salishsea-meopar-docs.readthedocs.io/en/latest/work_env/python3_conda_environment.html) with __python-3.8.10__; 
+      - e.g., ```conda create -n rezenv python=3.8.10```
+   * Activate your conda environment;
+      - e.g. ```conda activate rezenv```
+3. Clone your _MyNewProj_ into a desired director location; for example
+   * ```cd ~/all_rez_projects/```
+   * ```git clone https://github.com/<my_git_user_name>/MyNewProj.git```
+4. Move into the newly created project folder
+   * ```cd ~/all_rez_projects/MyNewProj```
+5. Now clone rezaware platform as a [submodule](https://github.blog/2016-02-01-working-with-submodules/)
+   * ```git submodule add https://github.com/waidyanatha/rezaware.git rezaware```
+6. Navigate into the rezaware folder and run setup to initialize the project
+   * ```cd rezaware```
+   * In the next command, 
+      - it is important to use the _--with_ini_files_ directive flag. 
+      - This instructs _000_setup.py_ to build the _wrangler_, _mining_, and visuals folders structure
+      - and the respective python __init.py__ and __app.ini__
+      - execute ```python3 -m 000_setup --with_ini_files```
+   * You have now created your _MyNewProj_ with the _rezaware_ platform framework. 
+1. Change back to the project director to push the code
+   * ```cd ..``` or ```cd ~/all_rez_projects/MyNewProj```
+   * add a _README.md_ file, if not already
+
 
 ## Introduction
 
