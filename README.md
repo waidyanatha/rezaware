@@ -10,7 +10,7 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 * [Starting a new project](#starting-a-new-project) - starting the _rezaware_ framework 
 * [Test the newly set project](#test-the-new-project) - run pytest scripts to ensure _rezaware_ integrity
 * [Re-configuring an existing project]()
-* 
+* [Description of the project artifacts](#about-the-post-setup-artifacts)
 
 ## Starting a New Project
 1. Create an empty git repository with the a desired project name; e.g., __MyNewProj__ . 
@@ -56,7 +56,14 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 Run __pytest__ by executing the command in your terminal prompt
 * ```pytest```
 
-## About the Post Setup Folders
+## Re-configuring existing project
+When you add a new module package into the _mining_, _wrangler_, and _visuals_ app folders; as well as defining them in the _app.cfg_ file, the ___init___ and ___app.ini___ framework files need to be updated. For such simply run the _000_setup.py_
+* ```cd ~/all_rez_projects/MyNewProj/rezaware``` navigate into the _rezaware_ folder
+* ```python3 -m 000_setup --with_ini_files``` will re-configure all the apps
+* Alternatively ```python3 -m 000_setup --app=wrangler,mining``` will only re-configure the specific apps
+
+
+## About the Post Setup Artifacts
 
 1. _Mining_ - Arificial Intelligence (AI) and Machine Learning (ML) analytical methods
 1. _Wrangler_- for processing data extract, transform, and load automated pipelines
