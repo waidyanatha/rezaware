@@ -9,6 +9,7 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 ## Table of Content
 * [Starting a new project](#starting-a-new-project) - starting the _rezaware_ framework 
 * [Test the newly set project](#test-the-new-project) - run pytest scripts to ensure _rezaware_ integrity
+* [Updating rezaware in your project](#update-rezaware-from-remote-repo) - to pull the latest code from _rezaware_ repo and apply to your project submodule
 * [Re-configuring an existing project](#reconfiguring-existing-project) - redoing the folders, init, and app.ini files
 * [Description of the project artifacts](#about-the-post-setup-artifacts) - brief description of the essential framework files and folders
 
@@ -32,12 +33,13 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
       - e.g. ```conda activate rezenv```
 1. Navigate into the rezaware folder and run setup to initialize the project with AI/ML functional app classes
    * ```cd rezaware```
-   * In the next command ```python3 -m 000_setup --with_ini_files```, 
-      - it is important to use the _--with_ini_files_ directive flag. 
-      - This instructs _000_setup.py_ to build the _wrangler_, _mining_, and visuals folders structure
-      - and the respective python __init.py__ and __app.ini__ files necessary for the seamless package integration
-      - execute ```python3 -m 000_setup --with_ini_files```
-   * You have now created your _MyNewProj_ with the _rezaware_ platform framework.
+   * In the next command run the setup for rezaware separately and the apps separately
+      - ```python3 -m 000_setup --app=rezaware --with_ini_files```; it is important to use the _--with_ini_files_ directive_ flag because it instructs _000_setup.py_ to build the _rezaware_ app and python __init.py__ and __app.ini__ files necessary for the seamless package integration 
+      - ```python3 -m 000_setup```; at the onset you would not have any _wrangler_, _mining_, and visuals code in the respective _modules_ folders; hence, you cannot build the python __init.py__ and __app.ini__ files. Without  the _--with_ini_files_ directive the process will simply generate the app folder structure and default _app.cfg_ file. 
+   * You have now created your _MyNewProj_ with the _rezaware_ platform framework and can begin to start coding.
+   * __Note__ you need to configure the _app.cfg_ in the _mining_,_wrangler_,and _visuals_ apps
+      - each time you add new module packages; it needs to be added or removed from app.cfg
+      - any other parameters, specific to the project must be changed.
 1. Change back to the project director
    * ```cd ..``` or ```cd ~/all_rez_projects/MyNewProj```
 1. Add the submodule and initialize
@@ -55,6 +57,16 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 ## Test the new Project
 Run __pytest__ by executing the command in your terminal prompt
 * ```pytest```
+
+## Update rezaware from remote repo
+From time to time you will need to update the _rezaware_ submodule, in your project. 
+1. change your directory to _MyNewProj_ folder
+   * ```cd ~/all_rez_projects/MyNewProj```
+1. fetch latest changes from _rezaware.git_ repository, and merge them into current _MyNewProj_ branch.
+   * ```git submodule update --remote --merge```
+1. update the repo in github:
+   * ```git commit -s -am "updating rezaware submodule with latest"```
+   * ```git push origin main```
 
 ## Reconfiguring existing project
 
