@@ -6,6 +6,11 @@ The README file is useful for projects that are using __rezaware__ platform for 
 
 __NOTE__: instructions and content is specific to Debian distros and was tested on Ubuntu 20.04.
 
+Table of Content
+* [Starting a New Project](#starting-a-new-project)
+* Re-configuring an existing Project
+* 
+
 ## Starting a New Project
 1. Create an empty git repository with the a desired project name; e.g., __MyNewProj__ . 
    * Presupose that you have [git installed and initialized](https://phoenixnap.com/kb/how-to-install-git-on-ubuntu) on your computer.
@@ -35,10 +40,10 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
    * ```git add .gitmodules rezaware/```
    * ```git init```
 1. (Optional) Include a _README.md_ file, if not already
-   * ```echo "# Welcome to MyNewProj" >> README.md
+   * ```echo "# Welcome to MyNewProj" >> README.md```
 1. Add and commit all newly created files and folders in _MyNewProj_
    * ```git add .```
-   * ```git commit -m "added rezaware submudle and setup project"
+   * ```git commit -m "added rezaware submudle and setup project"```
 1. Push the submodule and new commits to the repo
    * ```git push origin main```
    * Check your github project in the browser; you will see a folder ___rezaware @ xxxxxxx___; where xxxxxxx is the last 7 digits from the _rezaware.git_ repo commit code 
