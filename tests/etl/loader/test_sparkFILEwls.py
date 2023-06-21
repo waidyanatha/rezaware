@@ -6,7 +6,7 @@ def init_classes(root):
     try:
         sys.path.insert(1,root)
         import rezaware as reza
-        from utils.modules.etl.loader import sparkFILEwls as spark
+        from rezaware.modules.etl.loader import sparkFILEwls as spark
         from utils.modules.etl.loader.sparkFILEwls import credentials as cred
 
         __desc__ = "read and write files from and to a particular source"
