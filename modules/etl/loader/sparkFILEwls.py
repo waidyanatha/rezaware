@@ -162,11 +162,11 @@ class FileWorkLoads():
 
             logger.info("Connection complete! ready to load data.")
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
-                         %(self.__app__,
-                           self.__module__,
-                           self.__package__,
-                           self.__name__,
-                           self.__desc__))
+                         %(self.__app__.upper(),
+                           self.__module__.upper(),
+                           self.__package__.upper(),
+                           self.__name__.upper(),
+                           self.__desc__.upper()))
 
             print("%s Class initialization complete" % self.__name__)
 
