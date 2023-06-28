@@ -1172,7 +1172,7 @@ class FileWorkLoads():
                         file_path = str(os.path.join(self.storeRoot,self._folderPath,file_name))
                     else:
                         file_path = str(os.path.join(self.storeRoot,self._folderPath))
-                    print(file_path)
+#                     print(file_path)
                 elif self.storeMode == 'aws-s3-bucket':
                     ''' read content from s3 bucket '''
                     if file_name:
