@@ -1220,15 +1220,19 @@ class SQLWorkLoads():
                             batch_size=_batch_size,
                         )
                     )
+                    if upsert_stats is None or len(upsert_stats.collect())<=0:
+                        raise RuntimeError("upsert failed, returned %s count object" 
+                                           % type(upsert_stats))
                     total_recs_loaded = 0
                     for counter in upsert_stats.collect():
                         total_recs_loaded += counter
 
                 else:
+                    ''' invalid DB type '''
                     raise RuntimeError("TBD %s dbType upsert; only works for postgresql", self.dbType)
 
-                logger.info("%s Saved %d  rows into table %s in database %s complete!",
-                            __s_fn_id__,self.data.count(),
+                logger.info("%s Saved %d rows of %d records into table %s in database %s complete!",
+                            __s_fn_id__, total_recs_loaded, self.data.count(),
                             self.dbSchema+"."+db_table, self.dbName)
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
@@ -1409,39 +1413,53 @@ class SQLWorkLoads():
         conn, cur = None, None
         counter = 0
         batch = []
+        
+        try:
+            for record in dataframe_partition:
 
-        for record in dataframe_partition:
+                counter += 1
+                batch.append(list(record))
 
-            counter += 1
-            batch.append(list(record))
+                if not conn:
+                    conn = SQLWorkLoads.get_pgsql_conn(**database_credentials)
+                    cur = conn.cursor()
+                    logger.warning("%s PSQL connection set with %s and connection %s",
+                                   __s_fn_id__,type(cur),str(conn))
 
-            if not conn:
-                conn = SQLWorkLoads.get_pgsql_conn(**database_credentials)
-                cur = conn.cursor()
+                if counter % batch_size == 0:
+                    execute_values(
+                        cur=cur, sql=sql,
+                        argslist=batch,
+                        page_size=batch_size
+                    )
+                    conn.commit()
+                    logger.debug("%s executed and commited batch size %d counter %d",
+                                 __s_fn_id__,batch_size,counter)
+                    batch = []
 
-            if counter % batch_size == 0:
+            if batch:
                 execute_values(
                     cur=cur, sql=sql,
                     argslist=batch,
                     page_size=batch_size
                 )
                 conn.commit()
-                batch = []
+                logger.debug("%s executed and commited batch size %d",
+                             __s_fn_id__,batch_size)
 
-        if batch:
-            execute_values(
-                cur=cur, sql=sql,
-                argslist=batch,
-                page_size=batch_size
-            )
-            conn.commit()
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
 
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
+            yield counter
 
-        yield counter
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+            yield None
 
     @staticmethod
     def build_pgsql_query(
