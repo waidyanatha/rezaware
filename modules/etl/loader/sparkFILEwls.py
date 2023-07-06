@@ -25,7 +25,8 @@ try:
     import pandas as pd
     import numpy as np
     import json
-#     import boto3   # handling AWS S3 
+    import boto3   # handling AWS S3
+    from botocore.client import ClientError
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -160,7 +161,7 @@ class FileWorkLoads():
                 if not os.path.exists(self.tmpDIR):
                     os.makedirs(self.tmpDIR)
 
-            logger.info("Connection complete! ready to load data.")
+            logger.info("%s Connection complete! ready to load data.",__s_fn_id__)
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__.upper(),
                            self.__module__.upper(),
@@ -194,7 +195,7 @@ class FileWorkLoads():
             return self._data (pyspark dataframe)
         """
 
-        __s_fn_id__ = "function <@property data>"
+        __s_fn_id__ = f"{self.__name__} function <@property data>"
 
         try:
             if not isinstance(self._data,DataFrame):
@@ -219,12 +220,13 @@ class FileWorkLoads():
             return self._data (pyspark dataframe)
         """
 
-        __s_fn_id__ = "function <@data.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@data.setter>"
 
         try:
             if data is None:
                 raise AttributeError("Dataset cannot be empty")
             self._data = data
+            logger.debu("%s data property %s set",__s_fn_id__,type(self._data))
                 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -247,13 +249,13 @@ class FileWorkLoads():
     @property
     def storeMode(self) -> str:
 
-        __s_fn_id__= "function <@property.storeMode>"
+        __s_fn_id__= f"{self.__name__} function <@property.storeMode>"
         try:
 #                 self._storeMode.lower() not in self._storeModeList and \
             if self._storeMode is None and appConf.has_option("DATASTORE","MODE"):
                 self._storeMode = appConf.get("DATASTORE","MODE")
-                logger.warning("Reseting non-type storeMode to default %s from %s",
-                              self._storeMode, self.__conf_fname__)
+                logger.warning("%s Reseting non-type storeMode to default %s from %s",
+                              __s_fn_id__,self._storeMode.upper(), self.__conf_fname__.upper())
 
 #             if not self._storeMode.lower() in self._storeModeList:
 #                 raise ValueError("Parameter storeMode is not and must be set")
@@ -268,7 +270,7 @@ class FileWorkLoads():
     @storeMode.setter
     def storeMode(self, store_mode:str) -> str:
 
-        __s_fn_id__ = "function @mode.setter"
+        __s_fn_id__ = f"{self.__name__} function @mode.setter"
         try:
             if not store_mode.lower() in self._storeModeList:
                 raise ValueError("Parameter storeMode is not and must be set")
@@ -279,13 +281,15 @@ class FileWorkLoads():
 #                               store_mode,self._storeMode, self.__conf_fname__)
 #             else:
             self._storeMode = store_mode.lower()
+            logger.debug("%s storeMode set to %s",__s_fn_id__,self._storeMode.upper())
+
 #                 raise ValueError("Invalid mode = %s. Must be in %s" % (store_mode,self._storeModeList))
 
             if self._storeMode == 'google-storage' and os.environ.get('GCLOUD_PROJECT') is None:
                 if appConf.has_option("GOOGLE","PROJECTID"):
                     os.environ["GCLOUD_PROJECT"] = appConf.get("GOOGLE","PROJECTID")
-                    logger.info("GCLOUD_PROJECT os.environment set to %s"
-                                % os.environ.get('GCLOUD_PROJECT'))
+                    logger.info("%s GCLOUD_PROJECT os.environment set to %s",
+                                __s_fn_id__, os.environ.get('GCLOUD_PROJECT'))
                 else:
                     raise RuntimeError("PROJECTID of the google project, required to"+\
                                        "set the environment variable is undefined in %s"
@@ -313,13 +317,13 @@ class FileWorkLoads():
     @property
     def storeRoot(self) -> str:
 
-        __s_fn_id__ = "function @property storeRoot"
+        __s_fn_id__ = f"{self.__name__} function @property storeRoot"
 
         try:
             if self._storeRoot is None and appConf.has_option("DATASTORE","ROOT"):
                 self._storeRoot = appConf.get("DATASTORE","ROOT")
-                logger.warning("Non-type storeRoot set to default %s from %s"
-                               ,self._storeRoot,self.__conf_fname__)
+                logger.warning("%s Non-type storeRoot set to default %s from %s",
+                               __s_fn_id__,self._storeRoot.upper(),self.__conf_fname__)
 #             else:
 #                 raise ValueError("Invalid Non-Type %s. Set as a property of define in %s"
 #                                  % (self._storeRoot,self.__conf_fname__))
@@ -335,7 +339,7 @@ class FileWorkLoads():
     @storeRoot.setter
     def storeRoot(self, store_root:str="") -> str:
 
-        __s_fn_id__ = "function @storeRoot.setter"
+        __s_fn_id__ = f"{self.__name__} function @storeRoot.setter"
 
         try:
             if store_root is None and "".join(store_root.split())=="":
@@ -348,39 +352,44 @@ class FileWorkLoads():
 #                 self._storeRoot = store_root
 
             ''' validate storeRoot '''
-            if self.storeMode == "aws-s3-bucket":
+            if self._storeMode == "aws-s3-bucket":
                 ''' check if bucket exists '''
-                logger.debug("%s %s",__s_fn_id__,self.storeMode)
+#                 logger.debug("%s %s",__s_fn_id__,self._storeMode)
                 s3_resource = boto3.resource('s3')
                 s3_bucket = s3_resource.Bucket(name=store_root)
-                count = len([obj for obj in s3_bucket.objects.all()])
-                logger.debug("%s bucket with %d objects exists",
-                             self.storeMode,count)
-                if count <=0:
-                    raise ValueError("Invalid S3 Bucket = %s.\nAccessible Buckets are %s"
-                                     % (str(_bucket.name),
-                                        str([x for x in s3_resource.buckets.all()])))
+#                 count = len([obj for obj in s3_bucket.objects.all()])
+                try:
+                    s3_resource.meta.client.head_bucket(Bucket=s3_bucket.name)
+                except ClientError as aws_err:
+                    logger.warning("%s Could not find %s bucket but will be created",
+                                   __s_fn_id__,s3_bucket.name)
+#                 logger.debug("%s bucket with %d objects exists",
+#                              self.storeMode,count)
+#                 if count <=0:
+#                     raise ValueError("Invalid S3 Bucket = %s.\nAccessible Buckets are %s"
+#                                      % (str(_bucket.name),
+#                                         str([x for x in s3_resource.buckets.all()])))
 
-            elif self.storeMode == "local-fs":
+            elif self._storeMode == "local-fs":
                 ''' check if folder path exists '''
                 if not os.path.exists(store_root):
-#                 logger.debug("%s %s",__s_fn_id__,self.storeMode)
-#                 if not os.path.exists(store_root):
                     raise ValueError("Invalid local folder path = %s does not exists." 
                                      % (store_root))
 
-            elif self.storeMode == "google-storage":
+            elif self._storeMode == "google-storage":
                 ''' check if bucket exists '''
-                logger.debug("%s %s",__s_fn_id__,self.storeMode)
+                logger.debug("%s %s",__s_fn_id__,self._storeMode)
 #                 client = storage.Client()
 #                 if not client.bucket(store_root).exists():
 #                     raise ValueError("Invalid GCS bucket %s, does not exist." % (store_root))
 
             else:
                 raise ValueError("storeRoot %s does not exist for storeMode %s" 
-                                 % (store_root,self.storeMode))
+                                 % (store_root,self._storeMode))
 
             self._storeRoot = store_root
+            logger.debug("%s storeRoot set to %s for %s",
+                         __s_fn_id__,self._storeRoot.upper(),self._storeMode.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -401,7 +410,7 @@ class FileWorkLoads():
             self._folderPath (str)
         """
 
-        __s_fn_id__ = "function <@property folderPath>"
+        __s_fn_id__ = f"{self.__name__} function <@property folderPath>"
 
         try:
             if self._folderPath is None:
@@ -451,14 +460,15 @@ class FileWorkLoads():
             self._folderPath (str)
         """
 
-        __s_fn_id__ = "function <@folderPath.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@folderPath.setter>"
 
         try:
             if folder_path is None:
                 raise AttributeError("Non-type folder_path value is unacceptable")
 
                 ''' S3 creates the folder when saving a file; there's no concept of folders '''
-#             elif self._storeMode == "aws-s3-bucket":
+            elif self._storeMode == "aws-s3-bucket":
+                pass
 #                 ''' check if bucket exists '''
 #                 s3_resource = boto3.resource('s3')
 #                 path = self._folderPath.rstrip('/') 
@@ -512,12 +522,12 @@ class FileWorkLoads():
         Returns:
             self._asType (str) if unspecified default is SPARK
         """
-        __s_fn_id__ = "function @property asType"
+        __s_fn_id__ = f"{self.__name__} function @property asType"
 
         try:
             if self._asType is None:
                 self._asType = 'spark'
-                logger.warning("Non-type asType value, set to default value SPARK")
+                logger.warning("%s Non-type asType value, set to default value SPARK",__s_fn_id__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -536,13 +546,13 @@ class FileWorkLoads():
         Returns:
             self._asType (str)
         """
-        __s_fn_id__ = "function @asType.setter"
+        __s_fn_id__ = f"{self.__name__} function @asType.setter"
 
         try:
             if as_type.lower() not in self._asTypeList:
                 raise AttributeError("Invaid attribute as_type; must be %s" % str(self._asTypeList))
             self._asType = as_type.lower()
-            logger.debug("The asType property set to %s",self._asType)
+            logger.debug("%s The asType property set to %s",__s_fn_id__,self._asType)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -568,12 +578,12 @@ class FileWorkLoads():
     @property
     def homeDir(self) -> str:
 
-        __s_fn_id__ = "function <@property homeDir>"
+        __s_fn_id__ = f"{self.__name__} function <@property homeDir>"
 
         try:
             if self._homeDir is None and appConf.has_option('SPARK','HOMEDIR'):
                 self._homeDir = appConf.get('SPARK','HOMEDIR')
-                logger.debug("@property Spark homeDir set to: %s",self._homeDir)
+                logger.debug("%s Spark homeDir set to: %s",__s_fn_id__,self._homeDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -585,14 +595,14 @@ class FileWorkLoads():
     @homeDir.setter
     def homeDir(self,home_dir:str='') -> str:
 
-        __s_fn_id__ = "function <@homeDir.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@homeDir.setter>"
 
         try:
             if home_dir is None or "".join(home_dir.strip()) == "":
                 raise ConnectionError("Invalid spark HOMEDIR %s" % home_dir)
 
             self._homeDir = home_dir
-            logger.debug("@setter Spark homeDir set to: %s",self._homeDir)
+            logger.debug("%s Spark homeDir set to: %s",__s_fn_id__,self._homeDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -605,12 +615,12 @@ class FileWorkLoads():
     @property
     def binDir(self) -> str:
 
-        __s_fn_id__ = "function <@property binDir>"
+        __s_fn_id__ = f"{self.__name__} function <@property binDir>"
 
         try:
             if self._binDir is None and appConf.has_option('SPARK','BINDIR'):
                 self._binDir = appConf.get('SPARK','BINDIR')
-                logger.debug("@property Spark binDir set to: %s",self._binDir)
+                logger.debug("%s Spark binDir set to: %s",__s_fn_id__,self._binDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -622,14 +632,14 @@ class FileWorkLoads():
     @binDir.setter
     def binDir(self,bin_dir:str='') -> str:
 
-        __s_fn_id__ = "function <@binDir.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@binDir.setter>"
 
         try:
             if bin_dir is None or "".join(bin_dir.strip()) == "":
                 raise ConnectionError("Invalid spark BINDIR %s" % bin_dir)
 
             self._binDir = bin_dir
-            logger.debug("@setter Spark binDir set to: %s",self._binDir)
+            logger.debug("%s Spark binDir set to: %s",__s_fn_id__,self._binDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -642,7 +652,7 @@ class FileWorkLoads():
     @property
     def appName(self) -> str:
 
-        __s_fn_id__ = "function <@property appName>"
+        __s_fn_id__ = f"{self.__name__} function <@property appName>"
 
         try:
             if self._appName is None or "".join(self._appName.split())=="":
@@ -650,7 +660,7 @@ class FileWorkLoads():
                                           self.__module__,
                                           self.__package__,
                                           self.__name__])
-                logger.debug("@property Spark appName set to: %s",self._appName)
+                logger.debug("%s Spark appName set to: %s",__s_fn_id__,self._appName)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -662,14 +672,14 @@ class FileWorkLoads():
     @appName.setter
     def appName(self,app_name:str='') -> str:
 
-        __s_fn_id__ = "function <@appName.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@appName.setter>"
 
         try:
             if app_name is None or "".join(app_name.strip()) == "":
                 raise ConnectionError("Invalid spark APPNAME %s" % app_name)
 
             self._appName = app_name
-            logger.debug("@setter Spark appName set to: %s",self._appName)
+            logger.debug("%s Spark appName set to: %s",__s_fn_id__,self._appName)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -682,12 +692,12 @@ class FileWorkLoads():
     @property
     def config(self) -> str:
 
-        __s_fn_id__ = "function <@property config>"
+        __s_fn_id__ = f"{self.__name__} function <@property config>"
 
         try:
             if self._config is None and appConf.has_option('SPARK','CONFIG'):
                 self._config = appConf.get('SPARK','CONFIG')
-                logger.debug("@property Spark config set to: %s",self._config)
+                logger.debug("%s Spark config set to: %s",__s_fn_id__,self._config)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -699,14 +709,14 @@ class FileWorkLoads():
     @config.setter
     def config(self,config:str='') -> str:
 
-        __s_fn_id__ = "function <@config.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@config.setter>"
 
         try:
             if config is None or "".join(config.strip()) == "":
                 raise ConnectionError("Invalid spark CONFIG %s" % config)
 
             self._config = config
-            logger.debug("@setter Spark config set to: %s",self._config)
+            logger.debug("%s Spark config set to: %s",__s_fn_id__,self._config)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -719,12 +729,12 @@ class FileWorkLoads():
     @property
     def jarDir(self) -> str:
 
-        __s_fn_id__ = "function <@property jarDir>"
+        __s_fn_id__ = f"{self.__name__} function <@property jarDir>"
 
         try:
             if self._jarDir is None and appConf.has_option('SPARK','JARDIR'):
                 self._jarDir = appConf.get('SPARK','JARDIR')
-                logger.debug("@property Spark jarDir set to: %s",self._jarDir)
+                logger.debug("%s @property Spark jarDir set to: %s",__s_fn_id__,self._jarDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -736,14 +746,14 @@ class FileWorkLoads():
     @jarDir.setter
     def jarDir(self,jar_dir:str='') -> str:
 
-        __s_fn_id__ = "function <@jarDir.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@jarDir.setter>"
 
         try:
             if jar_dir is None or "".join(jar_dir.strip()) == "":
                 raise ConnectionError("Invalid spark JARDIR %s" % jar_dir)
 
             self._jarDir = jar_dir
-            logger.debug("@setter Spark jarDir set to: %s",self._jarDir)
+            logger.debug("%s Spark jarDir set to: %s",__s_fn_id__,self._jarDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -756,7 +766,7 @@ class FileWorkLoads():
     @property
     def master(self) -> str:
 
-        __s_fn_id__ = "function <@property master>"
+        __s_fn_id__ = f"{self.__name__} function <@property master>"
 
         try:
             if self._master is None and appConf.has_option('SPARK','MASTER'):
@@ -773,7 +783,7 @@ class FileWorkLoads():
     @master.setter
     def master(self,master:str='local[1]') -> str:
 
-        __s_fn_id__ = "function <@master.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@master.setter>"
 
         try:
             if master is None or "".join(master.strip()) == "":
@@ -794,7 +804,7 @@ class FileWorkLoads():
     @property
     def rwFormat(self) -> str:
 
-        __s_fn_id__ = "function <@property rwFormat>"
+        __s_fn_id__ = f"{self.__name__} function <@property rwFormat>"
 
         try:
             if self._rwFormat is None and appConf.has_option('SPARK','FORMAT'):
@@ -812,7 +822,7 @@ class FileWorkLoads():
     @rwFormat.setter
     def rwFormat(self,rw_format:str='csv') -> str:
 
-        __s_fn_id__ = "function <@saveMode.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
 
         try:
             if rw_format.lower() not in self._rwFormatTypes:
@@ -834,7 +844,7 @@ class FileWorkLoads():
     @property
     def saveMode(self) -> str:
 
-        __s_fn_id__ = "function <@property saveMode>"
+        __s_fn_id__ = f"{self.__name__} function <@property saveMode>"
 
         try:
             if self._saveMode is None and appConf.has_option('SPARK','SAVEMODE'):
@@ -851,7 +861,7 @@ class FileWorkLoads():
     @saveMode.setter
     def saveMode(self,save_mode:str='Overwrite') -> str:
 
-        __s_fn_id__ = "function <@saveMode.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
 
         try:
             if save_mode not in ['Append','Overwrite']:
@@ -880,7 +890,7 @@ class FileWorkLoads():
     @property
     def session(self):
 
-        __s_fn_id__ = "function <@property session>"
+        __s_fn_id__ = f"{self.__name__} function <@property session>"
 
         try:
             if self._session is None and \
@@ -915,7 +925,7 @@ class FileWorkLoads():
     @session.setter
     def session(self,session_args:dict={}):
 
-        __s_fn_id__ = "function <@session.setter session>"
+        __s_fn_id__ = f"{self.__name__} function <@session.setter session>"
 
         try:
             ''' 
@@ -983,7 +993,7 @@ class FileWorkLoads():
             self._context (sparkConf object)
         """
 
-        __s_fn_id__ = "function <@property context>"
+        __s_fn_id__ = f"{self.__name__} function <@property context>"
         _access_key=None
         _secret_key=None
 
@@ -1023,7 +1033,7 @@ class FileWorkLoads():
     @context.setter
     def context(self,context_args:dict={}):
 
-        __s_fn_id__ = "function <@session.setter context>"
+        __s_fn_id__ = f"{self.__name__} function <@session.setter context>"
         _access_key=None
         _secret_key=None
 
@@ -1056,8 +1066,8 @@ class FileWorkLoads():
                 pass
 
             self._context = conf
-            logger.info("Setting a new spark contex config: %s for %s"
-                        ,self._context, self.storeMode)
+            logger.info("%s Setting a new spark contex config: %s for %s",
+                        __s_fn_id__,self._context, self.storeMode)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1095,7 +1105,7 @@ class FileWorkLoads():
                 @functools.wraps receives the data, if not null and possible to convert
                 will convert to the requested dtype.
             """
-            __s_fn_id__ = "Function <wrapper_converter>"
+            __s_fn_id__ = f"{self.__name__} Function <wrapper_converter>"
 
             try:
 #                 format_, as_type_ = func(self,as_type,folder_path,file_name,file_type,**options)
@@ -1156,7 +1166,7 @@ class FileWorkLoads():
                 @functools.wraps to read the data into a pyspark dataframe using the
                 established self_rwFormat and the self.session
             """
-            __s_fn_id__ = "Function <wrapper_importer>"
+            __s_fn_id__ = f"{self.__name__} function <wrapper_importer>"
 
             try:
                 format_, as_type_ = func(self,as_type,folder_path,file_name,file_type,**options)
@@ -1198,6 +1208,7 @@ class FileWorkLoads():
                     file_path = "gs://"+file_path
                 else:
                     raise typeError("Invalid storage mode %s" % self.storeMode)
+                logger.debug("",)
 
                 if as_type_ in ['spark','pandas','array','list']:
                     sdf = self.session.read\
@@ -1256,7 +1267,7 @@ class FileWorkLoads():
             _read_mode (str) indicating whether a file name or file type read process
         """
 
-        __s_fn_id__ = "Function <read_files_to_dtype>"
+        __s_fn_id__ = f"{self.__name__} function <read_files_to_dtype>"
         _read_mode = None
         _read_format = None
 
@@ -1310,7 +1321,7 @@ class FileWorkLoads():
             return self._data (pyspark dataframe)
         """
 
-        __s_fn_id__ = "Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
+        __s_fn_id__ = f"{self.__name__} Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
 
         _csv_to_sdf = self.session.sparkContext.emptyRDD()     # initialize the return var
 #         _tmp_df = self.session.sparkContext.emptyRDD()
@@ -1543,7 +1554,7 @@ class FileWorkLoads():
           * https://realpython.com/python-boto3-aws-s3/
         """
 
-        _s_fn_id = "function <write_data>"
+        _s_fn_id = f"{self.__name__} function <write_data>"
         file_content=None
 
         try:
@@ -1614,7 +1625,7 @@ class FileWorkLoads():
         
         _csv_file_path = None
 
-        __s_fn_id__ = "function <save_sdf_to_csv>"
+        __s_fn_id__ = f"{self.__name__} function <save_sdf_to_csv>"
         logger.info("Executing %s in %s",__s_fn_id__, __name__)
 
         try:
@@ -1672,7 +1683,7 @@ class credentials():
         Returns: 
             appCFG (configparser object)
         """
-        __s_fn_id__ = "function <get_app_conf>"
+        __s_fn_id__ = f"{FileWorkLoads.__name__} function <get_app_conf>"
 
         try:
 #         self.cwd=os.path.dirname(__file__)
@@ -1706,7 +1717,7 @@ class credentials():
             aws_access_key_id (str) 
             aws_secret_access_key (str)
         """
-        __s_fn_id__ = "function <aws> credentials"
+        __s_fn_id__ = f"{FileWorkLoads.__name__} function <aws> credentials"
         aws_access_key_id=None
         aws_secret_access_key=None
 
