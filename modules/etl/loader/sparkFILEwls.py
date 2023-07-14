@@ -226,7 +226,7 @@ class FileWorkLoads():
             if data is None:
                 raise AttributeError("Dataset cannot be empty")
             self._data = data
-            logger.debu("%s data property %s set",__s_fn_id__,type(self._data))
+            logger.debug("%s data property %s set",__s_fn_id__,type(self._data))
                 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)

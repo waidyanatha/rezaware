@@ -356,7 +356,7 @@ class NoSQLWorkLoads():
         try:
             if db_name is not None and "".join(db_name.split())!="":
                 self._dbName = db_name
-                logger.warning("%s set class @property dbName to %s",__s_fn_id__,self._dbName.upper())
+                logger.debug("%s set class @property dbName to %s",__s_fn_id__,self._dbName.upper())
             else:
                 raise ConnectionError("Undefined dbName; set in app.cfg or as class property")
 
@@ -460,7 +460,7 @@ class NoSQLWorkLoads():
         __s_fn_id__ = f"{self.__name__} function <@dbAuthSource.setter>"
 
         try:
-            if db_auth_source is not None and "".join(db_auth_source.split())!="":
+            if db_auth_source is not None or "".join(db_auth_source.split())!="":
                 self._dbAuthSource = db_auth_source
                 logger.debug("%s set class property dbAuthSource to %s",
                              __s_fn_id__,self._dbAuthSource)
@@ -607,15 +607,20 @@ class NoSQLWorkLoads():
                                 % (__s_fn_id__,self.__conf_fname__))
             ''' check and set DBHOSTIP from args or app config '''
             if "DBHOSTIP" in connect_properties.keys():
-                _db_host_ip = connect_properties['DBHOSTIP']
+#                 _db_host_ip = connect_properties['DBHOSTIP']
+                self.dbHostIP = connect_properties['DBHOSTIP']
             elif appConf.get('NOSQLDB','DBHOSTIP'):
-                _db_host_ip = appConf.get('NOSQLDB','DBHOSTIP')
+#                 _db_host_ip = appConf.get('NOSQLDB','DBHOSTIP')
+                self.dbHostIP = appConf.get('NOSQLDB','DBHOSTIP')
             else:
                 raise ValueError("Undefined DBHOSTIP in function args and app config file. aborting")
 
             ''' check and set DBTYPE '''
             if "DBTYPE" in connect_properties.keys():
                 self.dbType = connect_properties['DBTYPE']
+            elif self._dbType is not None:
+                logger.warning("%s reusing already set property dbType %s",
+                            __s_fn_id__,self._dbType)
             elif appConf.get('NOSQLDB','DBTYPE'):
                 self.dbType = appConf.get('NOSQLDB','DBTYPE')
             else:
@@ -623,48 +628,76 @@ class NoSQLWorkLoads():
 
             ''' check and set DBUSER from args or app config '''
             if "DBUSER" in connect_properties.keys():
-                _db_user = connect_properties['DBUSER']
+#                 _db_user = connect_properties['DBUSER']
+                self.dbUser = connect_properties['DBUSER']
+            elif self._dbUser is not None:
+                logger.warning("%s reusing already set property dbUser %s",
+                            __s_fn_id__,self._dbUser)
             elif appConf.get('NOSQLDB','DBUSER'):
-                _db_user = appConf.get('NOSQLDB','DBUSER')
+#                 _db_user = appConf.get('NOSQLDB','DBUSER')
+                self.dbUser = appConf.get('NOSQLDB','DBUSER')
             else:
                 raise ValueError("Undefined DBUSER in function args and app config file. aborting")
 
             ''' check and set DBPSWD from args or app config '''
             if "DBPSWD" in connect_properties.keys():
-                _db_pswd = connect_properties['DBPSWD']
+#                 _db_pswd = connect_properties['DBPSWD']
+                self.dbPswd = connect_properties['DBPSWD']
+            elif self._dbPswd is not None:
+                logger.warning("%s reusing already set property dbPswd %s",
+                            __s_fn_id__,self._dbPswd)
             elif appConf.get('NOSQLDB','DBPSWD'):
-                _db_pswd = appConf.get('NOSQLDB','DBPSWD')
+#                 _db_pswd = appConf.get('NOSQLDB','DBPSWD')
+                self.dbPswd = appConf.get('NOSQLDB','DBPSWD')
             else:
                 raise ValueError("Undefined DBPSWD in function args and app config file. aborting")
 
             ''' check and set DBAUTHSOURCE from args or app config '''
             if "DBAUTHSOURCE" in connect_properties.keys():
-                _db_auth = connect_properties['DBAUTHSOURCE']
-            elif not self.dbName is None:
-                _db_auth = self._dbName
+#                 _db_auth = connect_properties['DBAUTHSOURCE']
+                self.dbAuthSource = connect_properties['DBAUTHSOURCE']
+            elif self._dbAuthSource is not None:
+                logger.warning("%s reusing already set property authSource %s",
+                            __s_fn_id__,self._dbAuthSource)
+            elif self.dbName is not None:
+                self.dbAuthSource = self._dbName
+#                 _db_auth = self._dbName
                 logger.warning("Unspecified DBAUTHSOURCE try with authSource = dbName")
             elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
-                _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
+#                 _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
+                self.dbAuthSource = appConf.get('NOSQLDB','DBAUTHSOURCE')
                 logger.warning("Trying db auth source with %s value",self.__conf_fname__)
             else:
                 raise ValueError("Undefined DBAUTHSOURCE in function args and app config file. aborting")
 
             ''' check and set DBAUTHMECHANISM from args or app config '''
             if "DBAUTHMECHANISM" in connect_properties.keys():
-                _db_mech = connect_properties['DBAUTHMECHANISM']
+#                 _db_mech = connect_properties['DBAUTHMECHANISM']
+                self.dbAuthMechanism = connect_properties['DBAUTHMECHANISM']
+            elif self._dbAuthMechanism is not None:
+                logger.warning("%s reusing already set property dbAuthMechanism %s",
+                            __s_fn_id__,self._dbAuthMechanism)
             elif appConf.get('NOSQLDB','DBAUTHMECHANISM'):
-                _db_mech = appConf.get('NOSQLDB','DBAUTHMECHANISM')
+#                 _db_mech = appConf.get('NOSQLDB','DBAUTHMECHANISM')
+                self.dbAuthMechanism = appConf.get('NOSQLDB','DBAUTHMECHANISM')
             else:
                 raise ValueError("Undefined DBAUTHMECHANISM in function args and app config file. aborting")
 
             ''' initialize noSQLdbconnect '''
             if self.dbType.lower() == 'mongodb':
+#                 self._connect = MongoClient(
+#                     _db_host_ip,
+#                     username=_db_user,
+#                     password=_db_pswd,
+#                     authSource=_db_auth,
+#                     authMechanism=_db_mech
+#                 )
                 self._connect = MongoClient(
-                    _db_host_ip,
-                    username=_db_user,
-                    password=_db_pswd,
-                    authSource=_db_auth,
-                    authMechanism=_db_mech
+                    self._dbHostIP,
+                    username=self._dbUser,
+                    password=self._dbPswd,
+                    authSource=self._dbAuthSource,
+                    authMechanism=self._dbAuthMechanism
                 )
                 logger.debug("%s %s",__s_fn_id__,str(self._connect))
             elif self.dbType.lower() == 'cassandra':
@@ -1159,7 +1192,7 @@ class NoSQLWorkLoads():
             if self.dbType.lower() == 'mongodb':
                 ''' confirm database exists '''
                 if not db_name in self.connect.list_database_names():
-                    raise RuntimeError("%s does not exist",db_name)
+                    raise RuntimeError("%s does not exist" % db_name)
                 ''' get data from MongoDB collection '''
                 if not db_coll in db.list_collection_names():
                     _collection = db[db_coll]
@@ -1252,6 +1285,66 @@ class NoSQLWorkLoads():
             print("[Error]"+__s_fn_id__, err)
 
         return db[db_coll]
+
+    ''' Function --- CREATE DATABASE ---
+
+        author <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def create_db(
+        self,
+        db_type : str = None,
+        db_name : str = None,   # Valid string
+        db_user : str = None,
+        db_pswd : str = None,
+        db_authSource : str = None,
+        db_authMech:str=None,
+        **kwargs,
+    ) -> str:
+        """
+            Description:
+                Create a database, for the set dbType with given name, authemtication, and
+                authentication mechanism. 
+                If a username and password is not provided, then the system user and the system
+                paswword is used.
+            Attributes:
+            
+        """
+        __s_fn_id__ = f"{self.__name__} function <create_db>"
+
+        try:
+            self.dbType = db_type
+            self.dbName = db_name
+            self.dbUser = db_user
+            self.dbPswd = db_pswd
+            self.dbAuthSource=db_authSource
+            self.dbAuthMechanism=db_authMech
+
+            if self._connect is None:
+                self.connect={}
+            try:
+                _dbs = self._connect.list_database_names()
+                if self._dbName in _dbs:
+                    logger.debug("%s %s is 1 of %d databases in %s",
+                                 __s_fn_id__,self._dbName,len(_dbs),self._dbType)
+                else:
+                    db = self.connect[self._dbName]
+                    coll = db["about"]
+                    _about_doc = {"name":self._dbName,"desc":self._dbName}
+                    ret_ = coll.insert_one(_about_doc)
+                    logger.debug("%s id:%s inserted about collection in %s",
+                                 __s_fn_id__,ret_.inserted_id,self._dbName)
+
+            except Exception as con_err:
+                logger.warning("%s %s \n",__s_fn_id__, con_err)
+                logger.warning("%s %s does not exist, creating new database"
+                               ,__s_fn_id__,self._dbName)
+        
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbName
 
 
     ''' convert to dict '''
