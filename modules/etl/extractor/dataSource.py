@@ -31,17 +31,7 @@ except Exception as e:
     print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
-'''
-    CLASS read and write data to a given location:
-        1) local directory
-        2) Amazon S3 bucket
 
-    Contributors:
-        * nuwan.waidyanatha@rezgateway.com
-
-    Resources:
-
-'''
 class FeedWorkLoads():
     """ ***************************************************************************************
     CLASS spefic to storing and retrieving data source feeds information
@@ -86,7 +76,14 @@ class FeedWorkLoads():
             "package" :None,
             "function":None
         } # is associated with the module or domain taxanomy of the data source
-        self._feed= None
+        self._feed = {
+            "id" : None,   # uniqude object identifier of the feed (i.e., primary key)
+            "source":None, # information about the data source owner, activer periods, and so on
+            "realm" : None,# uniquely identifies by the module, entity, package, function framework
+            "uri" : None,  # the domain, port, path, fragments, query, parameter, etc information for setting the feed
+            "get" : None   # describes the method and data object the feeds will return 
+        }
+        self._feedsList=None # holds a list of feeds dictionaries defined by self._feed
 
         ''' initiate to load app.cfg data '''
         global logger
@@ -251,15 +248,15 @@ class FeedWorkLoads():
 
         __s_fn_id__ = f"{self.__name__} function <@feed.setter>"
         
-        feed_prim_key_list = ['source', 'realm', 'uri', 'get']
+        _prim_elem_list = ['source', 'realm', 'context','uri', 'get']
 
         try:
             if not isinstance(feed,dict) or len(feed)<=0:
                 raise AttributeError("Invalid feed empty property %s type" % type(feed))
-            if len(list(set(feed.keys()).intersection(set(feed_prim_key_list)))) \
+            if len(list(set(feed.keys()).intersection(set(_prim_elem_list)))) \
                     < len(feed_prim_key_list):
                 raise AttributeError("Missing feed primary keys %s, madatory keys %s" 
-                                     % (feed,feed_prim_key_list))
+                                     % (feed,_prim_elem_list))
             self._feed = feed
             logger.debug("%s feed property set for realm %s",__s_fn_id__,self._feed['realm'])
 
@@ -269,6 +266,96 @@ class FeedWorkLoads():
             print("[Error]"+__s_fn_id__, err)
 
         return self._feed
+
+    ''' FEEDSLIST --- '''
+    @property
+    def feedsList(self) -> list:
+        """
+        Description:
+            list of data feeds; where a feed is defined by the class property self.feed
+        Attributes:
+            None
+        Returns:
+            self._feedsLis(list)feedsList 
+        Exceptions:
+          feedsListif feedsList is empty, throw AttributeError exception
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <@property feedsList>"
+        
+        try:
+            if not isinstance(self._feedsList,list) or len(self._feedsList)<=0:
+                raise AttributeError("Invalid empty feedsList property %s type" % type(self._feedsList))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._feedsList
+
+    @feedsList.setter
+    def feedsList(self,feeds_list:list) -> list:
+
+        __s_fn_id__ = f"{self.__name__} function <@feedsList.setter>"
+
+        try:
+            if not isinstance(feeds_list,list) or len(feeds_list)<=0:
+                raise AttributeError("Invalid empty feeds_list setter of %s type" % type(feed_list))
+
+            self._feedsList = feeds_list
+            logger.debug("%s property feedsList set with %d feeds",__s_fn_id__,len(self._feedsList))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._feedsList
+
+
+    ''' Function --- LIST SEARCH FEEDS LIST ---
+        authors: <nuwan.waidyanatha@rezgateway.com>
+                 <nileka.desilva@colombo.rezgateway.com>
+    '''
+    def seach_feeds_list(
+        self,
+        db_name : str =None,  # precise database name to search the list of collections and documents
+        coll_list:list=None,  # a list of precise collection names, else define substring in kwargs
+        realm : dict = None,  # realm dictionary with module, entity, package, function key/value pairs
+        context:dict = None,  # key/value pairs defined for the specific realm
+        **kwargs   # keys collection HASINNAME or DOCHASINNAME
+    ) -> list:
+        """
+            Description:
+                Supply a set of collection keywords to fetch all the documents Thereafter, filter them by
+                document realm and context values. 
+            Attributes:
+                db_name (str)- [optional] will attempt to use the self._db property value, if already set
+                realm (dict) - [optional] if provided will filter by realm key/value pair
+                context(dict)- [optional] if provided will filter by context key/value pairs
+                **kwargs (dict)) - dictionary of key value pair options to provide for filtering the search list
+                    'COLLHASINNAME' (list) of strings to filter collections
+                    'DOCHASINNAME' (list) of strings to filter the documents
+            Returns:
+                self._feed_list (list) of dictionaries with feed information
+            Exceptions:
+                if db_name not in MongoDB instance, throw AttributeError
+                if 
+        """
+        __s_fn_id__ = f"{self.__name__} function <seach_feeds_list>"
+        
+        try:
+            if db_name is not None or "".join(db_name.split())!="":
+                self.db = db_name
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return None
+
 
     ''' Function --- WRITE DATA FEED ---
         author <nuwan.waidyanatha@rezgateway.com 
