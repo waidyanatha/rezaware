@@ -69,19 +69,35 @@ class FeedWorkLoads():
         self.__ini_fname__ = __ini_fname__
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
-        
+        ''' defines the realm madatory elements '''
         self._realm = {
             "module" : None,
             "entity" : None,
             "package" :None,
             "function":None
         } # is associated with the module or domain taxanomy of the data source
+        ''' defines uri mandatory elements '''
+        self._uri = {
+            "urn" : None,
+            "protocol": None,
+            "domain" : None,
+            "port" : None,
+            "path" : None,
+            "query": None,
+            "fragments" :None,
+        }
+        ''' defines the madatory dict element '''
+        self._query = {
+            "expression":None,
+            "parameter" :None,             
+        }
+        ''' defines a single feed dict '''
         self._feed = {
-            "id" : None,   # uniqude object identifier of the feed (i.e., primary key)
-            "source":None, # information about the data source owner, activer periods, and so on
-            "realm" : None,# uniquely identifies by the module, entity, package, function framework
-            "uri" : None,  # the domain, port, path, fragments, query, parameter, etc information for setting the feed
-            "get" : None   # describes the method and data object the feeds will return 
+            "source" :None, # information about the data source owner, activer periods, and so on
+            "context":None, # taxonomy for categorizing the data feed
+            "realm" : None, # uniquely identifies by the module, entity, package, function framework
+            "uri" : None,   # the domain, port, path, fragments, query, parameter, etc information for setting the feed
+            "get" : None    # describes the method and data object the feeds will return 
         }
         self._feedsList=None # holds a list of feeds dictionaries defined by self._feed
 
@@ -173,16 +189,16 @@ class FeedWorkLoads():
             ''' validate realm data structure '''
             if not isinstance(realm,dict) and len(realm)<=0:
                 raise AttributeError("Cannot assign an empty %s type realm" % type(realm))
-            if len(list(set(realm.keys()).intersection(set(realm_keys)))) < len(realm_keys):
+            if len(list(set(realm.keys()).intersection(set(self._realm.keys())))) < len(self._realm.keys()):
                 raise AttributeError("Ivalid Realm keys %s, must be a dict with %s keys" 
-                                     % (str(realm.keys()),str(realm_keys)))
+                                     % (str(realm.keys()),str(self._realm.keys()).upper()))
             logger.debug("%s %s are vaild",__s_fn_id__,realm.keys())
             if realm['module'] is None or "".join(realm['module'].split())=="" \
                 or realm['entity'] is None or "".join(realm['entity'].split())=="":
                 raise AttributeError("Ivalid Realm module %s or entity %s cannot be empty" 
                                      % (type(realm['entity']),type(realm['entity'])))
             logger.debug("%s None empty module %s and entity %s",
-                         __s_fn_id__,realm['module'],realm['entity'])
+                         __s_fn_id__,realm['module'].upper(),realm['entity'].upper())
 
             ''' validate realm modules, entities, packages, and functions '''
             projHome = pkgConf.get("CWDS","PROJECT")
@@ -192,24 +208,24 @@ class FeedWorkLoads():
                 app_cfg = configparser.ConfigParser()
                 app_cfg.read(os.path.join(projHome,app,__conf_fname__))
                 for _mod_key, _mod_val in app_cfg.items('MODULES'):
-                    if realm['module'] == _mod_key:
+                    if realm['module'].lower() == _mod_key.lower():
                         valid_mod = True
-                        logger.debug("%s realm mdoule %s is valid in %s app",
-                                     __s_fn_id__,realm['module'],app.upper())
-                        if realm['entity'] in _mod_val.split(','):
+                        logger.debug("%s realm module %s is valid in %s app",
+                                     __s_fn_id__,realm['module'].upper(),app.upper())
+                        if realm['entity'].lower() in _mod_val.split(','):
                             valid_ent=True
                             logger.debug("%s realm entity %s is valid in %s app",
                                          __s_fn_id__,realm['entity'].upper(),app.upper())
                             break
 
             if not (valid_mod and valid_ent):
-                raise AttributeError("Invalid module %s or entity %s; check %s files in %s app" 
+                raise AttributeError("Invalid module %s or entity %s; check %s files" 
                                      % (realm['module'].upper(),realm['entity'].upper(),
-                                        app.upper(),__conf_fname__.upper()))
+                                        __conf_fname__.upper()))
 
             self._realm = realm
             logger.debug("%s realm property dict %s set",__s_fn_id__,str(self._realm))
-                
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
@@ -218,7 +234,7 @@ class FeedWorkLoads():
         return self._realm
 
 
-    ''' Function --- SOURCE ---
+    ''' Function --- FEED ---
         author: <nuwan.waidyanatha@rezgateway.com
     '''
     @property
@@ -231,10 +247,10 @@ class FeedWorkLoads():
         try:
             if not isinstance(self._feed,dict) or len(self._feed)<=0:
                 raise AttributeError("Invalid feed empty property %s type" % type(self._feed))
-            if len(list(set(self._feed.keys()).intersection(set(feed_prim_key_list)))) \
-                    < len(feed_prim_key_list):
+            if len(list(set(self._feed.keys()).intersection(set(self._feed.keys())))) \
+                    < len(self._feed.keys()):
                 raise AttributeError("Missing feed primary key information, must contain %s" 
-                                     % (feed_prim_key_list))
+                                     % (self._feed.keys()))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -253,8 +269,8 @@ class FeedWorkLoads():
         try:
             if not isinstance(feed,dict) or len(feed)<=0:
                 raise AttributeError("Invalid feed empty property %s type" % type(feed))
-            if len(list(set(feed.keys()).intersection(set(_prim_elem_list)))) \
-                    < len(feed_prim_key_list):
+            if len(list(set(feed.keys()).intersection(set(self._feed.keys())))) \
+                    < len(self._feed.keys()):
                 raise AttributeError("Missing feed primary keys %s, madatory keys %s" 
                                      % (feed,_prim_elem_list))
             self._feed = feed
@@ -267,7 +283,7 @@ class FeedWorkLoads():
 
         return self._feed
 
-    ''' FEEDSLIST --- '''
+    ''' --- FEEDS LIST --- '''
     @property
     def feedsList(self) -> list:
         """
@@ -314,67 +330,114 @@ class FeedWorkLoads():
         return self._feedsList
 
 
-    ''' Function --- LIST SEARCH FEEDS LIST ---
+    ''' Function --- READ FEEDS TO LIST ---
+    
         authors: <nuwan.waidyanatha@rezgateway.com>
-                 <nileka.desilva@colombo.rezgateway.com>
     '''
-    def seach_feeds_list(
+    def read_feeds_to_list(
         self,
-        db_name : str =None,  # precise database name to search the list of collections and documents
-        coll_list:list=None,  # a list of precise collection names, else define substring in kwargs
-        realm : dict = None,  # realm dictionary with module, entity, package, function key/value pairs
-        context:dict = None,  # key/value pairs defined for the specific realm
-        **kwargs   # keys collection HASINNAME or DOCHASINNAME
+        search_with_list:list=[],
+        **kwargs
     ) -> list:
         """
             Description:
-                Supply a set of collection keywords to fetch all the documents Thereafter, filter them by
-                document realm and context values. 
+                Objective is to provide a filtered list of data feeds. The first level of filtering is the database
+                name and secondly the collection list. The database name and collection name will be derived from
+                the realm. Additionally, the context key/value pairs are used in further filtering the set of
+                documents.
             Attributes:
-                db_name (str)- [optional] will attempt to use the self._db property value, if already set
-                realm (dict) - [optional] if provided will filter by realm key/value pair
-                context(dict)- [optional] if provided will filter by context key/value pairs
+                search_with_list (list)- [mandatory] list of dictionaries with the realm and context information
                 **kwargs (dict)) - dictionary of key value pair options to provide for filtering the search list
                     'COLLHASINNAME' (list) of strings to filter collections
-                    'DOCHASINNAME' (list) of strings to filter the documents
             Returns:
                 self._feed_list (list) of dictionaries with feed information
             Exceptions:
-                if db_name not in MongoDB instance, throw AttributeError
-                if 
+                if db_name not in NoSQL instance, throw AttributeError
+                if colllection not in NoSQL instance, throw AttributeError
         """
-        __s_fn_id__ = f"{self.__name__} function <seach_feeds_list>"
-        
+
+        __s_fn_id__ = f"{self.__name__} function <read_feeds_to_list>"
+
+        _filtered_doc_list = []
+        feed_list_ = []
+
         try:
-            if db_name is not None or "".join(db_name.split())!="":
-                self.db = db_name
+            if search_with_list is None or len(search_with_list) <=0:
+                raise AttributeError("Invalid empty %s type search_with_list" % type(search_with_list))
+            for search_dict in search_with_list:
+                try:
+                    ''' construct database name and collection name '''
+                    self.realm = search_dict['realm']
+                    _db_name = "_".join([self._realm['module'],self._realm['entity']]).lower()
+                    _coll_name="_".join([self._realm['package'],self._realm['function']]).lower()
+                    ''' read all documents in collection and database '''
+                    _docs_list = None
+                    _docs_list = clsNsql.read_documents(
+                        as_type = "DICT",
+                        db_name = _db_name,
+                        db_coll = _coll_name,
+                        doc_find={},
+                        **kwargs)
+                    if _docs_list is None or len(_docs_list)<=0:
+                        raise RuntimeError("database %s or collection %s does not exist" % (_db_name,_coll_name))
+                    logger.debug("%s database: %s and collection: %s read %d documents ",
+                                 __s_fn_id__, _db_name, _coll_name, len(_docs_list))
+
+                    ''' verify context keys and values exist '''
+                    if "context" not in search_dict.keys() or len(search_dict['context'])<=0:
+                        raise AttributeError("search dictionary has no context key or values to filter documents")
+
+                    ''' loop through the documents to filter by context '''
+                    for _doc_dict in _docs_list:
+                        try:
+                            if "context" not in _doc_dict.keys() \
+                                or len(_doc_dict['context'])<=0:
+                                raise AttributeError("document of search dictionary has no context key or values")
+
+                            ''' filter documents by context values '''
+                            _match_contx_count = 0
+                            for contx_key in search_dict['context']:
+                                ''' compare lower case values '''
+                                if _doc_dict['context'][contx_key].lower() == search_dict['context'][contx_key].lower():
+                                    _match_contx_count += 1
+                                ''' if perfect matching then add to valid filtered list '''
+                                if _match_contx_count == len(search_dict['context']):
+                                    _filtered_doc_list.append(_doc_dict)
+
+                        except Exception as contx_err:
+                            logger.warning("%s %s \n",__s_fn_id__, contx_err)
+
+                except Exception as doc_err:
+                    logger.warning("%s %s \n",__s_fn_id__, doc_err)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return None
+        return _filtered_doc_list
 
 
     ''' Function --- WRITE DATA FEED ---
         author <nuwan.waidyanatha@rezgateway.com 
     '''
-    def write_feeds(
+    def write_feeds_to_nosql(
         self,
         feed_list:list=[],
         **kwargs,
     ) -> list:
         """
             Definition:
-                The function takes a list of structured feed information, comprising a: 
-                * realm - that defines the module, entity, package, and function for creating
-                    the database and collection for storing the data
+                The function takes a list of structured feed dictionaries, comprising a: 
                 * source - owner, a summary describing the utility, a set of key value pairs
                     for categorizing the feed, and a dates that define the active status
+                * context - key/value pairs, specific to the data feed, necessary for further tagging
+                    and categorizing the data feed; i.e. sets the taxonomy 
+                * realm - that defines the module, entity, package, and function for creating
+                    the database and collection for storing the data
                 * uri - (univeral resource identifier) with spefics of the feed protocol, domain, 
                     port, path, query, fragment, 
-                * receive - method of the data (e.g., download) and the receiving data object 
+                * get - methods of the feed (e.g., download) and the receiving data object 
                     (e.g. JSON, CSV, etc)
                 The feed information is stored in a NoSQL database
             Attributes:
@@ -395,29 +458,88 @@ class FeedWorkLoads():
                     create collection name
         """
 
-        __s_fn_id__ = f"{self.__name__} function <write_feeds>"
+        __s_fn_id__ = f"{self.__name__} function <write_feeds_to_db>"
         
         _def_uuid_list =[]
+        docs_list_ = []
 
         try:
             for feed in feed_list:
-                self.feed = feed
-                self.realm= self._feed['realm']
-                if self._realm is None:
-                    raise RuntimeError("%s setting realm failed for %s" % self._feed['realm'])
-                db_name = "_".join([self._realm['module'],self._realm['entity']]).lower()
-                coll_name="_".join([self._realm['package'],self._realm['function']]).lower()
-                _coll = clsNsql.write_documents(
-                    db_name=db_name,
-                    db_coll=coll_name,
-                    data=feed,
-                    uuid_list=None
-                )
-                print(_coll)
-            
+                try:
+                    self.feed = feed
+                    self.realm= self._feed['realm']
+                    if self._realm is None:
+                        raise RuntimeError("%s setting realm failed for %s" % self._feed['realm'])
+                    ''' construct DB Name from realm and entity '''
+                    db_name = "_".join([self._realm['module'],self._realm['entity']]).lower()
+                    if db_name is None or "".join(db_name.split())=="":
+                        raise AttributeError("Empty %s db_name; cannot write feed to DB" % type(db_name))
+                    logger.debug("%s database name set to %s", __s_fn_id__, db_name)
+                    ''' construct collection name from package and function '''
+                    coll_name = "_".join([self._realm['package'],self._realm['function']]).lower()
+                    if coll_name is None or "".join(coll_name.split())=="":
+                        raise AttributeError("Empty %s coll_name; cannot write feed to collection in %s" 
+                                             % (type(coll_name),db_name))
+                    logger.debug("%s collection name set to %s", __s_fn_id__, coll_name)
+                    ''' if db doesn't exist then force to create '''
+#                     if "FORCEDB" not in kwargs.keys():
+#                         kwargs['FORCEDB']=True
+                    kwargs['FORCEDB']=True
+                    ''' write feed as a collection document to NoSQL DB '''
+                    written_doc_ = clsNsql.write_documents(
+                        db_name = db_name,
+                        db_coll = coll_name,
+                        data = feed,
+                        uuid_list=[],
+                        **kwargs,
+                    )
+                    ''' confirm collection was written and append name to list '''
+                    _doc_dict = {"database":db_name, "collection":coll_name, "_id":written_doc_[0]['_id']}
+                    if written_doc_ is None or len(written_doc_)<=0:
+                        raise RuntimeError("write_document returned a %s written_doc_" % type(written_doc_))
+                    docs_list_.append(_doc_dict)
+                    logger.debug("%s data feed added to collection %s", __s_fn_id__, str(_doc_dict))
+
+                except Exception as feed_err:
+                    logger.warning("%s feed had errors", __s_fn_id__)
+
+            ''' confirm collection list '''
+            if len(docs_list_)<=0:
+                raise RuntimeError("No collections were returned, got empty %s list" % type(docs_list_))
+            logger.debug("%s wrote %d documents to %s",__s_fn_id__,len(docs_list_),clsNsql.dbType)
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._feed
+        return docs_list_
+
+
+    ''' Function --- READ FEED DATA ---
+
+        author(s) : nuwan.waidyanatha@rezgateway.com
+    '''
+    def read_feed_data(
+        self,
+        feed : dict = None,
+        as_type : str=DataFrame,
+    ) -> any:
+        """
+        Description: 
+        Attributes :
+        Returns : 
+        Exceptions:
+        """
+        
+        __s_fn_id__ = f"{self.__name__} function <write_feeds_to_db>"
+
+        try:
+            pass
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return None

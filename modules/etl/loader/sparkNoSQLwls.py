@@ -391,7 +391,7 @@ class NoSQLWorkLoads():
         try:
             if db_user is not None and "".join(db_user.split())!="":
                 self._dbUser = db_user
-                logger.warning("%s set class property dbUser to %s",__s_fn_id__,self._dbUser)
+                logger.warning("%s set class property dbUser to %s",__s_fn_id__,self._dbUser.upper())
             else:
                 raise ConnectionError("Undefined dbUser; set in app.cfg or as class property")
 
@@ -426,7 +426,7 @@ class NoSQLWorkLoads():
         try:
             if db_pswd is not None and "".join(db_pswd.split())!="":
                 self._dbPswd = db_pswd
-                logger.debug("%s set class property dbPswd to %s",__s_fn_id__,self._dbPswd)
+                logger.debug("%s set class property dbPswd to %s",__s_fn_id__,self._dbPswd.upper())
             else:
                 raise ConnectionError("Undefined dbPswd; set in app.cfg or as class property")
 
@@ -463,7 +463,7 @@ class NoSQLWorkLoads():
             if db_auth_source is not None or "".join(db_auth_source.split())!="":
                 self._dbAuthSource = db_auth_source
                 logger.debug("%s set class property dbAuthSource to %s",
-                             __s_fn_id__,self._dbAuthSource)
+                             __s_fn_id__,self._dbAuthSource.upper())
             else:
                 raise ConnectionError("Undefined dbAuthSource; set in app.cfg or as class property")
 
@@ -499,7 +499,7 @@ class NoSQLWorkLoads():
             if db_auth_mechanism is not None and "".join(db_auth_mechanism.split())!="":
                 self._dbAuthMechanism = db_auth_mechanism
                 logger.debug("%s set class property dbAuthMechanism to %s",
-                             __s_fn_id__,self._dbAuthMechanism)
+                             __s_fn_id__,self._dbAuthMechanism.upper())
             else:
                 raise ConnectionError("Undefined dbAuthMechanism; set in app.cfg or as class property")
 
@@ -569,11 +569,11 @@ class NoSQLWorkLoads():
                 self.dbAuthMechanism:
                 if self.dbType.lower() == 'mongodb':
                     self._connect = MongoClient(
-                        self.dbHostIP,
-                        username=self.dbUser,
-                        password=self.dbPswd,
-                        authSource=self.dbAuthSource,
-                        authMechanism=self.dbAuthMechanism
+                        self._dbHostIP,
+                        username=self._dbUser,
+                        password=self._dbPswd,
+                        authSource=self._dbAuthSource,
+                        authMechanism=self._dbAuthMechanism
                     )
                     logger.warning("%s Nonetype connection set to %s using existing properties",
                                    __s_fn_id__,self._connect)
@@ -620,7 +620,7 @@ class NoSQLWorkLoads():
                 self.dbType = connect_properties['DBTYPE']
             elif self._dbType is not None:
                 logger.warning("%s reusing already set property dbType %s",
-                            __s_fn_id__,self._dbType)
+                            __s_fn_id__,self._dbType.upper())
             elif appConf.get('NOSQLDB','DBTYPE'):
                 self.dbType = appConf.get('NOSQLDB','DBTYPE')
             else:
@@ -632,7 +632,7 @@ class NoSQLWorkLoads():
                 self.dbUser = connect_properties['DBUSER']
             elif self._dbUser is not None:
                 logger.warning("%s reusing already set property dbUser %s",
-                            __s_fn_id__,self._dbUser)
+                            __s_fn_id__,self._dbUser.upper())
             elif appConf.get('NOSQLDB','DBUSER'):
 #                 _db_user = appConf.get('NOSQLDB','DBUSER')
                 self.dbUser = appConf.get('NOSQLDB','DBUSER')
@@ -645,7 +645,7 @@ class NoSQLWorkLoads():
                 self.dbPswd = connect_properties['DBPSWD']
             elif self._dbPswd is not None:
                 logger.warning("%s reusing already set property dbPswd %s",
-                            __s_fn_id__,self._dbPswd)
+                            __s_fn_id__,self._dbPswd.upper())
             elif appConf.get('NOSQLDB','DBPSWD'):
 #                 _db_pswd = appConf.get('NOSQLDB','DBPSWD')
                 self.dbPswd = appConf.get('NOSQLDB','DBPSWD')
@@ -658,7 +658,7 @@ class NoSQLWorkLoads():
                 self.dbAuthSource = connect_properties['DBAUTHSOURCE']
             elif self._dbAuthSource is not None:
                 logger.warning("%s reusing already set property authSource %s",
-                            __s_fn_id__,self._dbAuthSource)
+                            __s_fn_id__,self._dbAuthSource.upper())
             elif self.dbName is not None:
                 self.dbAuthSource = self._dbName
 #                 _db_auth = self._dbName
@@ -666,7 +666,7 @@ class NoSQLWorkLoads():
             elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
 #                 _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
                 self.dbAuthSource = appConf.get('NOSQLDB','DBAUTHSOURCE')
-                logger.warning("Trying db auth source with %s value",self.__conf_fname__)
+                logger.warning("Trying db auth source with %s value",self.__conf_fname__.upper())
             else:
                 raise ValueError("Undefined DBAUTHSOURCE in function args and app config file. aborting")
 
@@ -676,7 +676,7 @@ class NoSQLWorkLoads():
                 self.dbAuthMechanism = connect_properties['DBAUTHMECHANISM']
             elif self._dbAuthMechanism is not None:
                 logger.warning("%s reusing already set property dbAuthMechanism %s",
-                            __s_fn_id__,self._dbAuthMechanism)
+                            __s_fn_id__,self._dbAuthMechanism.upper())
             elif appConf.get('NOSQLDB','DBAUTHMECHANISM'):
 #                 _db_mech = appConf.get('NOSQLDB','DBAUTHMECHANISM')
                 self.dbAuthMechanism = appConf.get('NOSQLDB','DBAUTHMECHANISM')
@@ -703,7 +703,7 @@ class NoSQLWorkLoads():
             elif self.dbType.lower() == 'cassandra':
                 raise RuntimError("cassandra is to be included in a future release")
             else:
-                raise ValueError("Undefined dbType. It must be one of %s" % self._dbTypeList)
+                raise ValueError("Undefined dbType. It must be one of %s" % str(self._dbTypeList).upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -947,9 +947,9 @@ class NoSQLWorkLoads():
     @converter
     def read_documents(
         self,
-        as_type:str="",
-        db_name:str="",
-        db_coll:list=[],
+        as_type:str = "",
+        db_name:str = "",
+        db_coll:list= [],
         doc_find:dict={},
         **kwargs):
 
@@ -1129,6 +1129,7 @@ class NoSQLWorkLoads():
             db_coll:str,   # mandatory - relative path, w.r.t. self.storeRoot
             data,   # data to be stored
             uuid_list,
+            **kwargs,
         ):
 
             __s_fn_id__ = f"{self.__name__} function <create_docs_wrapper>"
@@ -1150,7 +1151,8 @@ class NoSQLWorkLoads():
                                  db_name,
                                  db_coll,
                                  data,
-                                 uuid_list
+                                 uuid_list,
+                                 **kwargs,
                                 )
 
     #             if self.dbType.lower == 'mongodb':
@@ -1178,23 +1180,61 @@ class NoSQLWorkLoads():
         db_coll:str,   # mandatory - relative path, w.r.t. self.storeRoot
         data=None,   # data to be stored
         uuid_list:list=[],   # unique identifier name to check if document exists
+        **kwargs
     ):
+        """
+        Description:
+        Attributes :
+        Returns :
+        Exceptions :
+        """
 
-        __s_fn_id__ = f"{self.__name__} function <write_data>"
+        __s_fn_id__ = f"{self.__name__} function <write_documents>"
         _collection = None, 
         _objIds = None
 
         try:
-            logger.debug("Writing document to %s",self.dbType)
-            db = self.connect[db_name]
-            
+            ''' set connection parameters from kwargs '''
+            if "DBUSER" in kwargs.keys() \
+                and isinstance(kwargs['DBUSER'],str) \
+                and "".join(kwargs['DBUSER'].split())!="":
+                self.dbUser=kwargs['DBUSER']
+            if "DBPSWD" in kwargs.keys() and \
+                isinstance(kwargs['DBPSWD'],str) \
+                and "".join(kwargs['DBPSWD'].split())!="":
+                self.dbUser=kwargs['DBPSWD']
+            if "DBAUTHSOURCE" in kwargs.keys() \
+                and isinstance(kwargs['DBAUTHSOURCE'],str) \
+                and "".join(kwargs['DBAUTHSOURCE'].split())!="":
+                self.dbUser=kwargs['DBUSER']
+            if "DBAUTHMECHANISM" in kwargs.keys() \
+                and isinstance(kwargs['DBAUTHMECHANISM'],str) \
+                and "".join(kwargs['DBAUTHMECHANISM'].split())!="":
+                self.dbUser=kwargs['DBAUTHMECHANISM']
+
+            logger.debug("%s Begin writing document to %s",__s_fn_id__,self.dbType.upper())
+
             ''' check if collection exists; else create one '''
             if self.dbType.lower() == 'mongodb':
+                db = self.connect[db_name]
                 ''' confirm database exists '''
                 if not db_name in self.connect.list_database_names():
-                    raise RuntimeError("%s does not exist" % db_name)
+                    if "FORCEDB" in kwargs.keys() and kwargs['FORCEDB']==True:
+                        ''' create a new database '''
+                        db_name = self.create_db(
+                            db_name = db_name,
+                            db_user = self._dbUser, # 'rezawareAdmin',
+                            db_pswd = self._dbPswd, # 'rezaware',
+                            db_authSource=self._dbAuthSource,    # 'admin',
+                            db_authMech = self._dbAuthMechanism, # 'SCRAM-SHA-256',
+                        )
+                        logger.debug("%s forced to create new database %s", __s_fn_id__, db_name.upper())
+                        ''' reconnect to newly created db '''
+                        db = self.connect[db_name]
+                    else:
+                        raise RuntimeError("database %s does not exist" % db_name.upper())
                 ''' get data from MongoDB collection '''
-                if not db_coll in db.list_collection_names():
+                if db_coll not in db.list_collection_names():
                     _collection = db[db_coll]
                     logger.info("Created a new collection %s",_collection)
                     ''' insert all the documents '''
@@ -1276,8 +1316,6 @@ class NoSQLWorkLoads():
                 raise RuntimeError("cassandra write is tbd")
             else:
                 raise ValueError("Something was wrong")
-            
-
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
