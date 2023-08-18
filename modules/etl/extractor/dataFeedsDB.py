@@ -183,7 +183,7 @@ class FeedWorkLoads():
 
         __s_fn_id__ = f"{self.__name__} function <@realm.setter>"
         
-        realm_keys = ['module','entity','package','function']
+#         realm_keys = ['module','entity','package','function']
 
         try:
             ''' validate realm data structure '''
@@ -242,7 +242,7 @@ class FeedWorkLoads():
 
         __s_fn_id__ = f"{self.__name__} function <@property feed>"
         
-        feed_prim_key_list = ['source', 'realm', 'uri', 'get']
+#         feed_prim_key_list = ['source', 'realm', 'uri', 'get']
 
         try:
             if not isinstance(self._feed,dict) or len(self._feed)<=0:
@@ -272,7 +272,7 @@ class FeedWorkLoads():
             if len(list(set(feed.keys()).intersection(set(self._feed.keys())))) \
                     < len(self._feed.keys()):
                 raise AttributeError("Missing feed primary keys %s, madatory keys %s" 
-                                     % (feed,_prim_elem_list))
+                                     % (feed.keys(),_prim_elem_list))
             self._feed = feed
             logger.debug("%s feed property set for realm %s",__s_fn_id__,self._feed['realm'])
 
@@ -329,6 +329,9 @@ class FeedWorkLoads():
 
         return self._feedsList
 
+    ''' --- URI ---
+        TODO add propert for uri with dict validation
+    '''
 
     ''' Function --- READ FEEDS TO LIST ---
     
@@ -358,7 +361,7 @@ class FeedWorkLoads():
 
         __s_fn_id__ = f"{self.__name__} function <read_feeds_to_list>"
 
-        _filtered_doc_list = []
+        filtered_doc_list_ = []
         feed_list_ = []
 
         try:
@@ -402,7 +405,7 @@ class FeedWorkLoads():
                                     _match_contx_count += 1
                                 ''' if perfect matching then add to valid filtered list '''
                                 if _match_contx_count == len(search_dict['context']):
-                                    _filtered_doc_list.append(_doc_dict)
+                                    filtered_doc_list_.append(_doc_dict)
 
                         except Exception as contx_err:
                             logger.warning("%s %s \n",__s_fn_id__, contx_err)
@@ -410,12 +413,17 @@ class FeedWorkLoads():
                 except Exception as doc_err:
                     logger.warning("%s %s \n",__s_fn_id__, doc_err)
 
+            if len(filtered_doc_list_)<=0:
+                raise RuntimeError("Invalid empty filtered_doc_list_; of type %s" % type(filtered_doc_list_))
+            self._feedsList = filtered_doc_list_
+            logger.debug("%s process completed with %d feeds added to feedsList", __s_fn_id__, len(self._feedsList))
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return _filtered_doc_list
+        return self._feedsList
 
 
     ''' Function --- WRITE DATA FEED ---
@@ -464,7 +472,8 @@ class FeedWorkLoads():
         docs_list_ = []
 
         try:
-            for feed in feed_list:
+            self.feedsList = feed_list
+            for feed in self._feedsList:
                 try:
                     self.feed = feed
                     self.realm= self._feed['realm']
