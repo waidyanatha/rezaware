@@ -958,6 +958,9 @@ class SQLWorkLoads():
                 raise AttributeError("Dataset cannot be empty")
             if not isinstance(data,DataFrame):
                 self._data = self.session.createDataFrame(data)
+                logger.debug("%s %s dtype convereted to %s with %d rows %d columns",
+                         __s_fn_id__,type(data),type(self._data),
+                         self._data.count(),len(self._data.columns))
             else:
                 self._data = data
 
@@ -1111,18 +1114,23 @@ class SQLWorkLoads():
 
         try:
             self.data = save_sdf
-            if self.data.count() <= 0:
-                raise AttributeError("No data to insert into database table %s"% db_table)
-            logger.debug("%s %s dtype data convereted to %s pysaprk dataframe with %d rows %d columns",
-                         __s_fn_id__,type(save_sdf),type(self._data),
-                         self._data.count(),len(self._data.columns))
-            self.dbName=db_name
+#             if self.data.count() <= 0:
+#                 raise AttributeError("No data to insert into database table %s"% db_table)
+#             logger.debug("%s %s dtype data convereted to %s pysaprk dataframe with %d rows %d columns",
+#                          __s_fn_id__,type(save_sdf),type(self._data),
+#                          self._data.count(),len(self._data.columns))
+            ''' optional db_name given then set property, else use default in setting  connection'''
+            if db_name is not None or "".join(db_name.split())=="":
+                self.dbName=db_name
+            ''' mandatory table name must be given '''
+            if not isinstance(db_table,str) or "".join(db_table.split())=="":
+                raise AttributeError("db_table cannot be empty %" % type(db_table))
+            ''' TODO validate table exists '''
+            
             if len(kwargs) > 0:
                 self.session = kwargs
             else:
                 self.session = {}
-
-            ''' TODO validate table exists '''
             
             ''' if created audit columns don't exist add them '''
             listColumns=self._data.columns
@@ -1137,7 +1145,7 @@ class SQLWorkLoads():
                 authentication and access to tables '''
 
 #             if "saveMode" in kwargs.keys():
-# #                 self.sparkSaveMode = kwargs['saveMode']
+#                 self.sparkSaveMode = kwargs['saveMode']
 #                 self.sparkSaveMode = kwargs['SAVEMODE']
                 
 #             logger.info("%s Wait a moment while we insert data int %s",__s_fn_id__,db_table)
@@ -1178,7 +1186,7 @@ class SQLWorkLoads():
         """
         
         @functools.wraps(func)
-        def upsert_wrapper(self,save_sdf,db_table,unique_keys,**options):
+        def upsert_wrapper(self,save_sdf, db_name, db_table,unique_keys,**options):
             """
             Description:
                 Applies the database type specific @static functions to upsert dataframe
@@ -1194,7 +1202,7 @@ class SQLWorkLoads():
 
             try:
                 _data, _omitted_cols, _batch_size = func(
-                    self,save_sdf,db_table,unique_keys,**options
+                    self, save_sdf, db_name, db_table, unique_keys, **options
                 )
 
                 if self.dbType == 'postgresql':
@@ -1220,6 +1228,7 @@ class SQLWorkLoads():
                             batch_size=_batch_size,
                         )
                     )
+                    ''' confirm upsert returned stats '''
                     if upsert_stats is None or len(upsert_stats.collect())<=0:
                         raise RuntimeError("upsert failed, returned %s count object" 
                                            % type(upsert_stats))
@@ -1232,8 +1241,9 @@ class SQLWorkLoads():
                     raise RuntimeError("TBD %s dbType upsert; only works for postgresql", self.dbType)
 
                 logger.info("%s Saved %d rows of %d records into table %s in database %s complete!",
-                            __s_fn_id__, total_recs_loaded, self.data.count(),
-                            self.dbSchema+"."+db_table, self.dbName)
+                            __s_fn_id__, total_recs_loaded, _data.count(),
+                            self._dbSchema+"."+db_table, self._dbName)
+
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
                 logger.debug(traceback.format_exc())
@@ -1247,7 +1257,8 @@ class SQLWorkLoads():
     def upsert_sdf_to_table(
         self,
         save_sdf,       # any dtype data set (will be converted to Dataframe)
-        db_table :str,  # name of table to be updated; excluding the schema name
+        db_name : str,  # optional name of the database; else use default
+        db_table: str,  # name of table to be updated; excluding the schema name
         unique_keys:List[str], # list of columns to use in the where statement 
 #         uspert_sql:str="",  # sql update statement
         **options) -> int:
@@ -1261,6 +1272,7 @@ class SQLWorkLoads():
             The options and and drivers will be set accordingly.
         Attributes:
             save_sdf (any) dtype that can be converted to a pyspark dataframe
+            db_name (str) optional name of the database; else use default
             db_table (str) table name to update rows; excluding schema name
             uspert_sql (str) sql update statement to apply directly
         Returns"
@@ -1315,6 +1327,9 @@ class SQLWorkLoads():
             ''' set all option parameters '''
             if "DBTYPE" in options.keys():
                 self.dbType = options['DBTYPE']
+            ''' optional db_name is given then set property, else use default '''
+            if db_name is not None or "".join(db_name.split())!="":
+                self.dbName=db_name
             if "PARTITIONS" in options.keys():
                 self.partitions = options['PARTITIONS']
             if "OMITCOLS" in options.keys():

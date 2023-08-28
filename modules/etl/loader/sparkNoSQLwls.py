@@ -911,9 +911,14 @@ class NoSQLWorkLoads():
                 ):
 
             __s_fn_id__ = f"{self.__name__} function <wrapper_converter>"
+            self._documents = None
+            _the_docs = None
 
             try:
                 _the_docs = func(self,as_type,db_name,db_coll,doc_find, **kwargs)
+                ''' validate before proceeding '''
+                if not isinstance(_the_docs,list) or len(_the_docs)<=0:
+                    raise AttributeError("No docs of %s received to process" % type(_the_docs))
 
                 if as_type.upper() == 'DICT':
                     self._documents = list(_the_docs)
