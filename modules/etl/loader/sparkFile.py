@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "sparkFILEwls"
+__name__ = "sparkFile"
 __module__ = "etl"
 __package__ = "loader"
 __app__ = "rezaware"
@@ -36,7 +36,11 @@ except Exception as e:
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
-    CLASS create, update, and migrate databases using pyspark sql scripts
+    CLASS create, update, and migrate data from and to files using pyspark. Specifically,
+        handles file read/write with:
+        * Local File Systems folders
+        * Amazon cloud AWS S3 buckets
+        * Google Cloud Storate (GCS) objects
 
     Contributors:
         * nuwan.waidyanatha@rezgateway.com
@@ -45,7 +49,7 @@ except Exception as e:
     Resources:
         https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
 '''
-class FileWorkLoads():
+class dataWorkLoads():
     ''' Function --- INIT ---
     
         author: <nuwan.waidyanatha@rezgateway.com>

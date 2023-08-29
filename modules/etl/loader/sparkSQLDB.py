@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "sparkDBwls"
+__name__ = "sparkSQLDB"
 __module__ = "etl"
 __package__ = "loader"
 __app__ = "rezaware"
@@ -54,7 +54,7 @@ except Exception as e:
             * Many thanks to Santhanu's medium article and code snipets for generating the
                 upsert_sdf_to_db function https://tinyurl.com/pyspark-batch-upsert
 '''
-class SQLWorkLoads():
+class dataWorkLoads():
 
     def __init__(self, desc : str="spark workloads",   # identifier for the instances
                  sparkPath:str=None,        # directory path to spark insallation
