@@ -1229,7 +1229,8 @@ class SQLWorkLoads():
                         )
                     )
                     ''' confirm upsert returned stats '''
-                    if upsert_stats is None or len(upsert_stats.collect())<=0:
+                    if not isinstance(upsert_stats.collect(),list) \
+                        or len(upsert_stats.collect())<=0:
                         raise RuntimeError("upsert failed, returned %s count object" 
                                            % type(upsert_stats))
                     total_recs_loaded = 0
@@ -1240,7 +1241,7 @@ class SQLWorkLoads():
                     ''' invalid DB type '''
                     raise RuntimeError("TBD %s dbType upsert; only works for postgresql", self.dbType)
 
-                logger.info("%s Saved %d rows of %d records into table %s in database %s complete!",
+                logger.info("%s Success saving %d rows of %d records in table %s in %s db complete!",
                             __s_fn_id__, total_recs_loaded, _data.count(),
                             self._dbSchema+"."+db_table, self._dbName)
 
