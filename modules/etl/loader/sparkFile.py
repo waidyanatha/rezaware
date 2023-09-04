@@ -55,9 +55,14 @@ class dataWorkLoads():
         author: <nuwan.waidyanatha@rezgateway.com>
 
     '''
-    def __init__(self, desc : str="spark workloads",   # identifier for the instances
-                 **kwargs:dict,   # can contain hostIP and database connection settings
-                ):
+    def __init__(
+        self, 
+        desc : str="spark workloads",   # identifier for the instances
+        store_mode:str=None,
+        store_root:str=None,
+        jar_dir : str =None,
+        **kwargs,
+    ):
         """
         Description:
         Attributes:
@@ -83,18 +88,12 @@ class dataWorkLoads():
 #             'DICT',    # data dictionary
 #         ]
 
-        ''' Initialize property var to hold the data '''
-        self._data = None
-        self._storeMode = None
+        ''' default values '''
         self._storeModeList = [
             'local-fs',   # local hard drive on personal computer
             'aws-s3-bucket',   # cloud amazon AWS S3 Bucket storage
             'google-storage',  # google cloud storage buckets
         ]
-        self._storeRoot =None  # holds the data root path or bucket name
-        self._folderPath=None  # property attr for the set/get folder path
-        self._data = None
-        self._asType = None
         self._asTypeList = [
             'str',   # text string ""
             'list',  # list of values []
@@ -110,11 +109,18 @@ class dataWorkLoads():
             'text',  # text file
         ]
 
+        ''' Initialize property var to hold the data '''
+        self._data = None
+        self._storeMode =store_mode
+        self._storeRoot =store_root  # holds the data root path or bucket name
+        self._folderPath=None  # property attr for the set/get folder path
+        self._asType = None
+
         ''' Initialize spark session parameters '''
         self._homeDir= None   # spark $SPARK_HOME dir path property required for sessions
         self._binDir = None   # spark $SPARK_BIN dir path property required for sessions
         self._config = None   # spark .conf option property
-        self._jarDir = None   # spark JAR files dir path property
+        self._jarDir = jar_dir   # spark JAR files dir path property
         self._appName= None   # spark appName property with a valid string
         self._master = None   # spark local[*], meso, or yarn property 
         self._rwFormat=None   # spark read/write formats (jdbc, csv,json, text) property
@@ -248,7 +254,7 @@ class dataWorkLoads():
             return (str) self._storeMode
 
             author: <nuwan.waidyanatha@rezgateway.com>
-            
+
     '''
     @property
     def storeMode(self) -> str:
@@ -826,7 +832,7 @@ class dataWorkLoads():
     @rwFormat.setter
     def rwFormat(self,rw_format:str='csv') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@rwFormat.setter>"
 
         try:
             if rw_format.lower() not in self._rwFormatTypes:
@@ -1037,7 +1043,7 @@ class dataWorkLoads():
     @context.setter
     def context(self,context_args:dict={}):
 
-        __s_fn_id__ = f"{self.__name__} function <@session.setter context>"
+        __s_fn_id__ = f"{self.__name__} function <@context.setter>"
         _access_key=None
         _secret_key=None
 
@@ -1061,7 +1067,9 @@ class dataWorkLoads():
                          "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS")
                 # This is required if you are using service account and set true, 
                 conf.set('fs.gs.auth.service.account.enable', 'true')
-                ##conf.set('google.cloud.auth.service.account.json.keyfile', "/path/to/keyfile")
+#                 if "".join(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])!="":
+#                     conf.set('google.cloud.auth.service.account.json.keyfile',
+#                              os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
                 # Following are required if you are using oAuth
                 ##conf.set('fs.gs.auth.client.id', 'YOUR_OAUTH_CLIENT_ID')
                 ##conf.set('fs.gs.auth.client.secret', 'OAUTH_SECRET')
@@ -1210,9 +1218,10 @@ class dataWorkLoads():
                         ''' multiple files of same file type '''
                         file_path = str(os.path.join(self.storeRoot,self._folderPath))
                     file_path = "gs://"+file_path
+                    self.context = {}
                 else:
                     raise typeError("Invalid storage mode %s" % self.storeMode)
-                logger.debug("",)
+                logger.debug("%s file path set to %s", __s_fn_id__, file_path)
 
                 if as_type_ in ['spark','pandas','array','list']:
                     sdf = self.session.read\
@@ -1308,7 +1317,7 @@ class dataWorkLoads():
             author: <nuwan.waidyanatha@rezgateway.com>
             
     '''
-    @classmethod
+#     @classmethod
     def read_csv_to_sdf(
         self,
         files_path:str="", 
@@ -1648,11 +1657,13 @@ class dataWorkLoads():
                 _csv_file_path = os.path.join(self.tmpDIR, fname)
                 logger.info("No file path defined, saving to default %s", _csv_file_path)
 
+            self.rwFormat = 'csv'
+
             ''' save sdf to csv '''
 #            sdf.write.option("header",True)\
 #                    .option("delimiter",",")\
 #                    .csv(_csv_file_path)
-            sdf.write.mode(self.saveMode)\
+            sdf.write.mode(self._saveMode)\
                     .option("header",True)\
                     .format(self.rwFormat)\
                     .save(_csv_file_path)
@@ -1677,6 +1688,8 @@ class credentials():
     ''' Function --- GET_APP_CONF ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
+                    <samana.thetha@gmail.com>
+                    <farmraider@protonmail.com>
     '''
     @staticmethod
     def get_app_conf():
