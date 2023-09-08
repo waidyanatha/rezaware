@@ -32,11 +32,11 @@ except Exception as e:
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
-    CLASS create, update, and migrate databases using sql scripts
-        1) 
+    CLASS is a simple utility for spawning an apache spark session that makes use of
+        app.cfg default values.
 
     Contributors:
-        * nuwan.waidyanatha@rezgateway.com
+        * farmraider@protonmain.com
 
     Resources:
         https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/

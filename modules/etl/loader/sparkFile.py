@@ -1009,14 +1009,19 @@ class dataWorkLoads():
 
         try:
             if self._context is None:
+                logger.debug("%s %s %s",__s_fn_id__, self._storeMode)
                 conf = self.session.sparkContext._jsc.hadoopConfiguration()
-                if self.storeMode == 'aws-s3-bucket':
+                if self._storeMode == 'aws-s3-bucket':
+                    print('getting credentials')
                     _access_key, _secret_key = credentials.aws()
+                    logger.debug("%s %s %s",__s_fn_id__, _access_key, _secret_key)
+#                     conf.set("fs.s3a.access.key", 'AKIA22BHFOYPWJA4LDNB')
+#                     conf.set("fs.s3a.secret.key", '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')
                     conf.set("fs.s3a.access.key", _access_key)
                     conf.set("fs.s3a.secret.key", _secret_key)
                     conf.set("fs.s3a.impl","org.apache.hadoop.fs.s3a.S3AFileSystem")
 
-                elif self.storeMode == 'google-storage':
+                elif self._storeMode == 'google-storage':
                     conf.set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")
                     conf.set("fs.AbstractFileSystem.gs.impl",
                              "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS")
@@ -1152,7 +1157,7 @@ class dataWorkLoads():
                 print("[Error]"+__s_fn_id__, err)
 
             return self._data
-            return self._data
+
         return wrapper_converter
 
     def importer(func):
@@ -1416,132 +1421,151 @@ class dataWorkLoads():
             data,   # data to be stored
         ):
 
-            _file_path=func(self,file_name,folder_path,data)
-            
-            ''' create a tmp folder to stage the file before writing to file path '''
-            _tmp_folder_path = os.path.join(self.dataDir,"tmp")
-            if not os.path.exists(_tmp_folder_path):
-                os.makedirs(_tmp_folder_path)
-                logger.debug("Created a new tmp folder %s",_tmp_folder_path)
-            else:
-                logger.debug("%s tmp folder exists",_tmp_folder_path)
-            ''' make the tmp file path to save '''    
-            _tmp_file_path = os.path.join(_tmp_folder_path,file_name)
-            logger.debug("tmp_file_path set to %s",_tmp_file_path)
+            _s_fn_id = f"{self.__name__} function <wrapper_writer>"
 
-            ''' check data type and save to tmp '''
-            _file_type = file_name.rsplit('.',1)[1]
-
-            if isinstance(data,str):
-                ''' Strings to txt, csv, json files '''
-                if _file_type == 'txt':
-                    print(_file_type)
-                elif _file_type == 'csv':
-                    print(_file_type)
-
-            elif isinstance(data,dict):
-                ''' Dictionary to txt, csv, json files '''
-                if _file_type == 'csv':
-                    with open(_tmp_file_path, 'w') as f:  
-                        writer = csv.writer(f)
-                        for key, value in data.items():
-                            writer.writerow([key, value])
-                elif _file_type == 'json':
-                    with open(_tmp_file_path, "w") as f:
-                        json.dump(data, f)
-                else:
-                    raise TypeError("Unsupported file type for dictionary data type")
-
-            elif isinstance(data,list):
-                ''' List to txt, csv, json files '''
-                if _file_type == 'txt':
-                    print("TBD",_file_type)
-                elif _file_type == 'json':
-                    with open(_tmp_file_path, "w") as f:
-                        json.dump(data, f)
-                elif _file_type == 'csv':
-                    print(_file_type)
-                else:
-                    raise TypeError("Unsupported file type for List data type")
-
-            elif isinstance(data,np.ndarray):
-                ''' Array to txt, csv files '''
-                if _file_type == 'txt':
-                    np.savetxt(_tmp_file_path, data)
-                elif _file_type == 'csv':
-                    np.savetxt(_tmp_file_path, data, delimiter=",")
-                else:
-                    raise TypeError("Unsupported file type for Array data type")
-
-            elif isinstance(data,pd.DataFrame):
-                ''' Pandas DataFrame to txt, csv, json files '''
-                if file_name.rsplit('.',1)[1] == "csv":
-                    data.to_csv(_tmp_file_path,index=False)
-                elif file_name.rsplit('.',1)[1] == "json":
-                    data.to_json(_tmp_file_path)
-                else:
-                    raise TypeError("Unsupported file type for Pandas DataFrame data type")
-
-            elif isinstance(data,DataFrame):
-                ''' Spark dataframe to txt, csv, json files '''
-#                 _data_type = "SPARK"
-#                 options={
-#                     "header":True,
-#                 }
-#                 self.saveMode="Overwrite"
-#                 self._data.write.mode(self._saveMode)\
-#                         .option("header",True)\
-#                         .format(self.rwFormat)\
-#                         .save(_tmp_file_path)
-                self._data = data.toPandas()
-                if file_name.rsplit('.',1)[1] == "csv":
-                    self._data.to_csv(_tmp_file_path,index=False)
-                elif file_name.rsplit('.',1)[1] == "json":
-                    self._data.to_json(_tmp_file_path)
-                else:
-                    raise TypeError("Unsupported file type for Pandas DataFrame data type")
-            else:
-                raise TypeError("Unrecognized data type %s must be either of\n%s"
-                                % (type(self._data),str(self._asTypeList)))
-
-            ''' transfer the tmp file to storage '''
-            with open(_tmp_file_path,'r') as infile:
-#                 object_data = infile.read()
-                self._data = infile.read()
-
-                if self.storeMode == 'aws-s3-bucket':
-                    ''' write file to AWS S3 Bucket '''
-                    s3 = boto3.client('s3')
-                    s3.put_object(Body=self._data, 
-                                  Bucket=self.storeRoot,
-                                  Key=_file_path)
-
-                elif self.storeMode == 'local-fs':
-                    ''' write file to Local File System '''
-                    with open(_file_path,'w') as savefile:
-                        savefile.write(self._data)
-
-                elif self.storeMode == 'google-storage':
-                    ''' write file to google-cloud-storage '''
-                    client = storage.Client()
-                    bucket = client.bucket(self.storeRoot)
-                    blob = bucket.blob(_file_path)
-#                     blob.upload_from_filename(_tmp_file_path)
-                    with blob.open("w") as f:
-                        f.write(self._data)
-
-                else:
-                    raise RuntimeError("Something went wrong writing %s file to %s"
-                                       % (_tmp_file_path,self.storeMode))
-
-            ''' remove the tmp file throw exception if something other than does not exists '''
             try:
-                os.remove(_tmp_file_path)
-            except OSError as e:
-                if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
-                    raise # re-raise exception if a different error occurred
+                _file_path=func(self,file_name,folder_path,data)
 
-            return self._data
+                ''' create a tmp folder to stage the file before writing to file path '''
+                _tmp_folder_path = os.path.join(self.dataDir,"tmp")
+                if not os.path.exists(_tmp_folder_path):
+                    os.makedirs(_tmp_folder_path)
+                    logger.debug("Created a new tmp folder %s",_tmp_folder_path)
+                else:
+                    logger.debug("%s tmp folder exists",_tmp_folder_path)
+                ''' make the tmp file path to save '''    
+                _tmp_file_path = os.path.join(_tmp_folder_path,file_name)
+                logger.debug("tmp_file_path set to %s",_tmp_file_path)
+
+                ''' check data type and save to tmp '''
+                try:
+                    _file_type = file_name.rsplit('.',1)[1]
+                except IndexError:
+                    _file_type = None
+                if _file_type is None:
+                    raise ValueError("Failed to strip file type extension from %s" 
+                                     % file_name.upper())
+                logger.debug("%s File name %s is of file type %s", 
+                             _s_fn_id, file_name.upper(), _file_type.upper())
+    #             _file_type = file_name.rsplit('.',1)[1]
+
+                if isinstance(data,str):
+                    ''' Strings to txt, csv, json files '''
+                    if _file_type.lower() == 'txt':
+                        print(_file_type)
+                    elif _file_type.lower() == 'csv':
+                        print(_file_type)
+
+                elif isinstance(data,dict):
+                    ''' Dictionary to txt, csv, json files '''
+                    if _file_type.lower() == 'csv':
+                        with open(_tmp_file_path, 'w') as f:  
+                            writer = csv.writer(f)
+                            for key, value in data.items():
+                                writer.writerow([key, value])
+                    elif _file_type.lower() == 'json':
+                        with open(_tmp_file_path, "w") as f:
+                            json.dump(data, f)
+                    else:
+                        raise TypeError("Unsupported file type for dictionary data type")
+
+                elif isinstance(data,list):
+                    ''' List to txt, csv, json files '''
+                    if _file_type.lower() == 'txt':
+                        print("TBD",_file_type)
+                    elif _file_type.lower() == 'json':
+                        with open(_tmp_file_path, "w") as f:
+                            json.dump(data, f)
+                    elif _file_type.lower() == 'csv':
+                        print(_file_type)
+                    else:
+                        raise TypeError("Unsupported file type for List data type")
+
+                elif isinstance(data,np.ndarray):
+                    ''' Array to txt, csv files '''
+                    if _file_type.lower() == 'txt':
+                        np.savetxt(_tmp_file_path, data)
+                    elif _file_type.lower() == 'csv':
+                        np.savetxt(_tmp_file_path, data, delimiter=",")
+                    else:
+                        raise TypeError("Unsupported file type for Array data type")
+
+                elif isinstance(data,pd.DataFrame):
+                    ''' Pandas DataFrame to txt, csv, json files '''
+#                     if file_name.rsplit('.',1)[1] == "csv":
+                    if _file_type.lower() == "csv":
+                        data.to_csv(_tmp_file_path,index=False)
+                    elif _file_type.lower() == "json":
+                        data.to_json(_tmp_file_path)
+                    else:
+                        raise TypeError("Unsupported file type for Pandas DataFrame data type")
+
+                elif isinstance(data,DataFrame):
+                    ''' Spark dataframe to txt, csv, json files '''
+    #                 _data_type = "SPARK"
+    #                 options={
+    #                     "header":True,
+    #                 }
+    #                 self.saveMode="Overwrite"
+    #                 self._data.write.mode(self._saveMode)\
+    #                         .option("header",True)\
+    #                         .format(self.rwFormat)\
+    #                         .save(_tmp_file_path)
+                    self._data = data.toPandas()
+                    if _file_type.lower() == "csv":
+                        self._data.to_csv(_tmp_file_path,index=False)
+                    elif _file_type.lower() == "json":
+                        self._data.to_json(_tmp_file_path)
+                    else:
+                        raise TypeError("Unsupported file type for Pandas DataFrame data type")
+                else:
+                    raise TypeError("Unrecognized data type %s must be either of\n%s"
+                                    % (type(self._data),str(self._asTypeList)))
+
+                ''' transfer the tmp file to storage '''
+                with open(_tmp_file_path,'r') as infile:
+    #                 object_data = infile.read()
+                    self._data = infile.read()
+
+                    if self.storeMode == 'aws-s3-bucket':
+                        ''' write file to AWS S3 Bucket '''
+                        s3 = boto3.client('s3')
+                        s3.put_object(Body=self._data, 
+                                      Bucket=self.storeRoot,
+                                      Key=_file_path)
+
+                    elif self.storeMode == 'local-fs':
+                        ''' write file to Local File System '''
+                        with open(_file_path,'w') as savefile:
+                            savefile.write(self._data)
+
+                    elif self.storeMode == 'google-storage':
+                        ''' write file to google-cloud-storage '''
+                        client = storage.Client()
+                        bucket = client.bucket(self.storeRoot)
+                        blob = bucket.blob(_file_path)
+    #                     blob.upload_from_filename(_tmp_file_path)
+                        with blob.open("w") as f:
+                            f.write(self._data)
+
+                    else:
+                        raise RuntimeError("Something went wrong writing %s file to %s"
+                                           % (_tmp_file_path,self.storeMode))
+
+                ''' remove the tmp file throw exception if something other than does not exists '''
+                try:
+                    os.remove(_tmp_file_path)
+                except OSError as e:
+                    if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                        raise # re-raise exception if a different error occurred
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+#             return self._data
+            return _file_path
 
         return wrapper_writer
 
@@ -1603,7 +1627,7 @@ class dataWorkLoads():
             elif self.storeMode == 'local-fs':
                 ''' check if folder existis '''
                 if not os.path.exists(os.path.join(self.storeRoot,folder_path)):
-                    os.makedir(os.path.join(self.storeRoot,folder_path))
+                    os.makedirs(os.path.join(self.storeRoot,folder_path))
                     logger.debug("Created a new folder %s in %s root path ",
                                      folder_path,self.storeRoot)
                 else:
@@ -1621,9 +1645,9 @@ class dataWorkLoads():
 
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return _file_path
 
@@ -1632,7 +1656,11 @@ class dataWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def save_sdf_to_csv(self, sdf, filesPath=None, **kwargs):
+    def save_sdf_to_csv(
+        self, 
+        data : any = None,  # can be any pandas or spark dataframe 
+        file_path:str=None, # file path relative to the storeRoot
+        **kwargs):
         """
         """
         
@@ -1642,14 +1670,9 @@ class dataWorkLoads():
         logger.info("Executing %s in %s",__s_fn_id__, __name__)
 
         try:
-            if isinstance(sdf,pd.DataFrame):
-                sdf = self.session.createDataFrame(sdf) 
-            ''' data exists? '''
-            if sdf.count() <= 0:
-                raise ValueError("No data for input dataframe to save")
-            logger.info("Received % rows to save to file", sdf.count())
+            self._data = data
             ''' determine where to save '''
-            if filesPath:
+            if file_path:
                 _csv_file_path = filesPath
                 logger.info("File ready to save to %s", _csv_file_path)
             else:
@@ -1695,19 +1718,19 @@ class credentials():
     def get_app_conf():
         """
         Description:
-            Uses the FileWorkLoads current working directory (cwd) and config file name
+            Uses the dataWorkLoads current working directory (cwd) and config file name
         Attributes:
         Returns: 
             appCFG (configparser object)
         """
-        __s_fn_id__ = f"{FileWorkLoads.__name__} function <get_app_conf>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} function <get_app_conf>"
 
         try:
 #         self.cwd=os.path.dirname(__file__)
-            clsSpark = FileWorkLoads(desc=__s_fn_id__)
+            clsSpark = dataWorkLoads(desc=__s_fn_id__)
             appCFG = configparser.ConfigParser()
             appCFG.read(os.path.join(clsSpark.appDir,clsSpark.__conf_fname__))
-
+            
         except Exception as err:
             logger.error("%s %s",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
@@ -1734,7 +1757,10 @@ class credentials():
             aws_access_key_id (str) 
             aws_secret_access_key (str)
         """
-        __s_fn_id__ = f"{FileWorkLoads.__name__} function <aws> credentials"
+        import os
+        from configparser import ConfigParser
+        
+        __s_fn_id__ = f"{dataWorkLoads.__name__} function <aws> credentials"
         aws_access_key_id=None
         aws_secret_access_key=None
 
@@ -1755,18 +1781,32 @@ class credentials():
                 _fpath = _appCFG.get('AWSAUTH','CREDFILEPATH')
             else:
                 _fpath = '~/.aws/credentials'
-                
-            with open(os.path.expanduser(_fpath)) as f:
-                for line in f:
-                    #print(line.strip().split(' = '))
-                    try:
-                        key, val = line.strip().split(' = ')
-                        if key == 'aws_access_key_id':
-                            aws_access_key_id = val
-                        elif key == 'aws_secret_access_key':
-                            aws_secret_access_key = val
-                    except ValueError:
-                        pass
+
+            ''' initialize configparser to read credentials '''
+            credConf = configparser.ConfigParser()
+            credConf.read(_fpath)
+            ''' get profile specific keys '''
+            aws_access_key_id = credConf.get(_profile.lower(),"aws_access_key_id")
+            aws_secret_access_key=credConf.get(_profile.lower(),"aws_secret_access_key")
+            ''' create environment variables '''
+            if os.environ.get["AWS_ACCESS_KEY"] is None or os.environ.get["AWS_ACCESS_KEY"]=="":
+                os.environ["AWS_ACCESS_KEY"] = aws_access_key_id
+            if os.environ.get["AWS_SECRET_KEY"] is None or os.environ.get["AWS_SECRET_KEY"]=="":
+                os.environ["AWS_SECRET_KEY"] = aws_secret_access_key
+
+#             with open(os.path.expanduser(_fpath)) as f:
+#                 for line in f:
+#                     try:
+#                         if line.lower()=="["+_profile.lower()+"]":
+#                             print(line.lower(),"["+_profile.lower()+"]")
+#     #                     print(line.strip().split(' = '))
+#                             key, val = line.strip().split(' = ')
+#                             if key == 'aws_access_key_id':
+#                                 aws_access_key_id = val
+#                             elif key == 'aws_secret_access_key':
+#                                 aws_secret_access_key = val
+#                     except ValueError:
+#                         pass
 
         except Exception as err:
             logger.error("%s %s",__s_fn_id__, err)

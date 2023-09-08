@@ -76,7 +76,7 @@ class dataWorkLoads():
     ):
         """
         Description:
-            Initializes the SQLWorkLoads: class property attributes, app configurations, 
+            Initializes the dataWorkLoads: class property attributes, app configurations, 
                 logger function, data store directory paths, and global classes
         Attributes:
             desc (str) to change the instance description for identification
@@ -208,11 +208,11 @@ class dataWorkLoads():
 
         try:
             ''' validate property value '''
-            if db_type not in self._dbTypeList:
+            if db_type.lower() not in self._dbTypeList:
                 raise ConnectionError("Invalid database type %s must be one of %s" 
-                                      % (db_type, self._dbTypeList))
+                                      % (db_type.upper(), str(self._dbTypeList).upper()))
             ''' set valid property with value '''
-            self._dbType = db_type
+            self._dbType = db_type.lower()
             logger.debug("%s dbType is: %s",__s_fn_id__, self._dbType.upper())
 
         except Exception as err:
@@ -220,7 +220,7 @@ class dataWorkLoads():
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbType.lower()
+        return self._dbType
 
     ''' --- DRIVER --- '''
     @property
@@ -1101,8 +1101,8 @@ class dataWorkLoads():
     '''
     def read_data_from_table(
         self,
-        select:str="",
-        db_table:str="",
+        select : str="",
+        db_table :str="",
         db_column:str="",
         lower_bound=None,
         upper_bound=None,
@@ -1128,7 +1128,7 @@ class dataWorkLoads():
         option = {}
 
         try:
-#             print("Wait a moment, retrieving data ...")
+            
             if self.dbType == 'postgresql':
                 ''' set the partitions '''
                 if "PARTITIONS" in options.keys():
@@ -1152,14 +1152,14 @@ class dataWorkLoads():
                 elif db_table is not None and "".join(db_table.split())!="":
                     if db_table.find(self.dbSchema+".") == -1:
                         db_table = self.dbSchema+"."+db_table
-                    option["dbtable"]=db_table
+                    options["dbtable"]=db_table
                 else:
                     raise AttributeError("Invalid set of input variables necesssary "+\
                                          "to determine the read operation")
             elif self.dbType == 'bigquery':
                 ''' --- BIGQUERY --- '''
                 if "table" in options.keys() and "".join(options['table'].split())!="":
-                    option['table']=options['table']
+                    options['table']=options['table']
                 elif db_table is not None and "".join(db_table.split())!="":
                     if db_table.find(self.dbSchema+".") == -1:
                         option['table'] = appConf.get('GOOGLE','PROJECTID')+\
@@ -1172,7 +1172,7 @@ class dataWorkLoads():
             else:
                 raise AttributeError("Something went wrong, unrecognized database type %s" 
                                       % self._dbType.upper())
-                        
+
             load_sdf = self.session.read\
                 .format(self.rwFormat)\
                 .options(**options)\
@@ -1216,7 +1216,7 @@ class dataWorkLoads():
 #                          __s_fn_id__,type(save_sdf),type(self._data),
 #                          self._data.count(),len(self._data.columns))
             ''' optional db_name given then set property, else use default in setting  connection'''
-            if db_name is not None or "".join(db_name.split())=="":
+            if isinstance(db_name,str) and "".join(db_name.split())!="":
                 self.dbName=db_name
             ''' mandatory table name must be given '''
             if not isinstance(db_table,str) or "".join(db_table.split())=="":
@@ -1302,7 +1302,7 @@ class dataWorkLoads():
                 )
 
                 if self.dbType == 'postgresql':
-                    upsert_query = SQLWorkLoads.build_pgsql_query(
+                    upsert_query = dataWorkLoads.build_pgsql_query(
                         cols=_data.schema.names,
                         table_name=self.dbSchema+"."+db_table,
                         unique_key=unique_keys,
@@ -1317,7 +1317,7 @@ class dataWorkLoads():
                         "port": self.dbPort,
                     }
                     upsert_stats = _data.coalesce(self.partitions).rdd.mapPartitions(
-                        lambda dataframe_partition: SQLWorkLoads.batch_and_upsert(
+                        lambda dataframe_partition: dataWorkLoads.batch_and_upsert(
                             dataframe_partition=dataframe_partition,
                             sql=upsert_query,
                             database_credentials=_db_cred,
@@ -1380,11 +1380,11 @@ class dataWorkLoads():
         
         __s_fn_id__ = f"{self.__name__} function <upsert_sdf_to_table>"
         
-        cols_not_for_update_=None
+        cols_not_for_update_=[]
         batch_size_ = 1000
 
         try:
-            print("Validating upsert attributes and parameters ...")
+#             print("Validating upsert attributes and parameters ...")
             self.data = save_sdf
             if self.data.count() <= 0:
                 raise ValueError("No data to update in table")
@@ -1396,19 +1396,21 @@ class dataWorkLoads():
             ''' TODO validate table exists '''
             
             ''' if created audit columns don't exist add them '''
-            listColumns=self.data.columns
+            listColumns=self._data.columns
             if "modified_dt" not in listColumns:
                 self._data = self._data.withColumn("modified_dt", F.current_timestamp())
             else:
                 self._data = self._data.withColumn('modified_dt',
                                                    F.when(F.col('modified_dt').isNull(),
-                                                          F.current_timestamp()))
+                                                          F.current_timestamp()
+                                                         ).otherwise(F.col('modified_dt')))
             if "modified_by" not in listColumns:
                 self._data = self._data.withColumn("modified_by", F.lit(self.dbUser))
             else:
                 self._data = self._data.withColumn('modified_by',
                                                    F.when(F.col('modified_by').isNull(),
-                                                          F.lit(self.dbUser)))
+                                                          F.lit(self.dbUser)
+                                                         ).otherwise(F.col('modified_by')))
             _s_mod_proc = "_".join([self.__app__,self.__module__,self.__package__,
                                     self.__name__,__s_fn_id__])
             if "modified_proc" not in listColumns:
@@ -1416,7 +1418,8 @@ class dataWorkLoads():
             else:
                 self._data = self._data.withColumn('modified_proc',
                                                    F.when(F.col('modified_proc').isNull(),
-                                                          F.lit(_s_mod_proc)))
+                                                          F.lit(_s_mod_proc)
+                                                         ).otherwise(F.col('modified_proc')))
 
             ''' TODO: add code to accept options() to manage schema specific
                 authentication and access to tables '''
@@ -1425,7 +1428,7 @@ class dataWorkLoads():
             if "DBTYPE" in options.keys():
                 self.dbType = options['DBTYPE']
             ''' optional db_name is given then set property, else use default '''
-            if db_name is not None or "".join(db_name.split())!="":
+            if db_name is not None and "".join(db_name.split())!="":
                 self.dbName=db_name
             if "PARTITIONS" in options.keys():
                 self.partitions = options['PARTITIONS']
@@ -1480,7 +1483,7 @@ class dataWorkLoads():
             port (str) postgres port to connect; e.g. 5432.
         Return (connect) database connection.
         """
-        __s_fn_id__ = f"{SQLWorkLoads.__name__} @staticmethod <upsert_sdf_to_table>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} @staticmethod <upsert_sdf_to_table>"
 
         try:
             conn = connect(
@@ -1520,7 +1523,7 @@ class dataWorkLoads():
         Return (int) with total records processed.
         """
 
-        __s_fn_id__ = f"{SQLWorkLoads.__name__} @staticmethod <batch_and_upsert>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} @staticmethod <batch_and_upsert>"
 
         conn, cur = None, None
         counter = 0
@@ -1533,7 +1536,7 @@ class dataWorkLoads():
                 batch.append(list(record))
 
                 if not conn:
-                    conn = SQLWorkLoads.get_pgsql_conn(**database_credentials)
+                    conn = dataWorkLoads.get_pgsql_conn(**database_credentials)
                     cur = conn.cursor()
                     logger.warning("%s PSQL connection set with %s and connection %s",
                                    __s_fn_id__,type(cur),str(conn))
@@ -1601,7 +1604,7 @@ class dataWorkLoads():
         Returns (str) Upsert query as per input arguments.
         """
 
-        __s_fn_id__ = f"{SQLWorkLoads.__name__} @staticmethod <build_pgsql_query>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} @staticmethod <build_pgsql_query>"
 
         insert_query=""
         on_conflict_clause=""
@@ -1632,10 +1635,97 @@ class dataWorkLoads():
                 update_cols_str,
                 update_cols_with_excluded_markers_str
             )
-
+#             print(insert_query + on_conflict_clause)
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
         return insert_query + on_conflict_clause
+
+
+
+    ''' - Functions --- SPARK POSTGRES BATCH UPSERT ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def get_db_table_info(
+        self,
+        db_type : str = None,
+        db_name : str = None,
+        db_schema:str = None,
+        **options
+    ) -> DataFrame:
+        """
+        Description:
+            fetches the table information, such as catelog, schema, name of all or specific
+                tables from the specified database and schema
+                Necessary to validate the table exisits before performing an CRUD actions
+        Attributes :
+            db_name (str) database name is mandatory
+            kwargs (dict)
+                DBSCHEMA (str) if not defined will list tables for all schemas
+        returns :
+            table_info_sdf_ (DataFrame)
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <get_db_table_info>"
+        
+        __def_pg_db_info_tbl__= "information_schema.tables"
+        __def_pg_schema_col__ = "table_schema"
+
+        try:
+            ''' validate database name '''
+            if db_type is not None and "".join(db_type.split())!="":
+                self.dbType = db_type
+            if db_name is not None and "".join(db_name.split())!="":
+                self.dbName = db_name
+            if db_schema is not None and "".join(db_schema.split())!="":
+                self.dbSchema = db_schema
+            if self.dbType == 'postgresql':
+                ''' set the partitions '''
+                if "PARTITIONS" in options.keys():
+                    self.partitions = options['PARTITIONS']
+                if "FORMAT" in options.keys():
+                    self.rwFormat = options['FORMAT']
+                if "url" not in options.keys():
+                    options['url'] = self.dbConnURL
+                if "numPartitions" not in options.keys():
+                    options['numPartitions'] = self.partitions
+                if "user" not in options.keys():
+                    options['user'] = self.dbUser
+                if "password" not in options.keys():
+                    options['password'] = self.dbPswd
+                if "driver" not in options.keys():
+                    options['driver'] = self.dbDriver
+                if "dbtable" not in options.keys() or "".join(options['dbtable'])=="":
+                    options['dbtable'] = __def_pg_db_info_tbl__
+
+                table_info_sdf_ = None
+                table_info_sdf_ = self.session.read\
+                    .format(self.rwFormat)\
+                    .options(**options)\
+                    .load()
+                if not isinstance(table_info_sdf_,DataFrame):
+                    raise RuntimeError("Failed reading table info from %s %s returned empty %s" 
+                                       % (self._dbType.upper(), self.dbName.upper(),
+                                          type(table_info_sdf_)))
+                logger.debug("%s returned %d rows and %d columns for %s %s",
+                             __s_fn_id__, table_info_sdf_.count(), len(table_info_sdf_.columns), 
+                             self._dbType.upper(), self.dbName.upper())
+                ''' filter by Schema name '''
+                if self._dbSchema:
+                    table_info_sdf_ = table_info_sdf_.filter(
+                        F.col(__def_pg_schema_col__).isin([self._dbSchema])
+                    )
+                    logger.debug("%s filter for schema %s returned %d rows and %d columns",
+                                 __s_fn_id__, self._dbSchema.upper(), 
+                                 table_info_sdf_.count(), len(table_info_sdf_.columns))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return table_info_sdf_
+
