@@ -1015,8 +1015,6 @@ class dataWorkLoads():
                     print('getting credentials')
                     _access_key, _secret_key = credentials.aws()
                     logger.debug("%s %s %s",__s_fn_id__, _access_key, _secret_key)
-#                     conf.set("fs.s3a.access.key", 'AKIA22BHFOYPWJA4LDNB')
-#                     conf.set("fs.s3a.secret.key", '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')
                     conf.set("fs.s3a.access.key", _access_key)
                     conf.set("fs.s3a.secret.key", _secret_key)
                     conf.set("fs.s3a.impl","org.apache.hadoop.fs.s3a.S3AFileSystem")
