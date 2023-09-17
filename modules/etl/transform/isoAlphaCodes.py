@@ -3,8 +3,8 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "isoAlphaCodes"
-__module__ = "etl"
 __package__ = "transform"
+__module__ = "etl"
 __app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
@@ -184,14 +184,14 @@ class dataWorkLoads():
 
         return self._data
 
-    ''' Function -- GET ISO 3661 --
+    ''' Function -- GET ISO 3166 --
 
             author: <nuwan.waidyanatha@rezgateway.com>
             
             TODO: complete subdivision when data is available
     '''
     @staticmethod
-    def subdivision_to_3661_2(
+    def subdivision_to_3166_2(
         data : DataFrame = None,
         subdiv_dict :list= None,
         alpha2_attr :str = None,
@@ -200,7 +200,7 @@ class dataWorkLoads():
         """
         """
 
-        __s_fn_id__ = f"{dataWorkLoads.__name__} function <subdivision_to_3661_2>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} function <subdivision_to_3166_2>"
         __def_geom_attr__ = "geom"
 
 
@@ -239,7 +239,7 @@ class dataWorkLoads():
 
 
     @staticmethod
-    def country_to_3661_1(
+    def country_to_3166_1(
         data : DataFrame = None,
         get_code : str = None,
         country_attr:str = None,
@@ -249,9 +249,9 @@ class dataWorkLoads():
         """
         """
 
-        __s_fn_id__ = f"{dataWorkLoads.__name__} function <country_to_3661_1>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} function <country_to_3166_1>"
 
-        def iso_3661_wrapper(country, get_code):
+        def iso_3166_wrapper(country, get_code):
 
             _country = None
             _country = pycountry.countries.lookup(country)
@@ -273,7 +273,7 @@ class dataWorkLoads():
             return ret_val
 
         try:
-            convertUDF = F.udf(lambda country: iso_3661_wrapper(country, get_code))
+            convertUDF = F.udf(lambda country: iso_3166_wrapper(country, get_code))
             data = data.withColumn(return_attr, \
                                    F.when(F.col(country_attr).isNotNull() |
                                           ~F.col(country_attr).isin('NaN',''),
@@ -295,7 +295,7 @@ class dataWorkLoads():
         return data
 
 
-    def get_iso_3661(
+    def get_iso_3166(
         self,
         data : any = None, # any dtype that can be converted to pyspark dataframe
         t_iso: dict=None,# dict of convertions and supporting values
@@ -321,7 +321,7 @@ class dataWorkLoads():
             self._data (DataFrame) with the new columns
         """
 
-        __s_fn_id__ = f"{self.__name__} function <get_iso_3661>"
+        __s_fn_id__ = f"{self.__name__} function <get_iso_3166>"
         
         __def_alpha_keys__ = ['COUNTRY', 'SUBDIV', 'CITY', 'CONTINENT']
         __def_trans_keys__ = ['ALPHA2','ALPHA3','UN', 'TYPE', 'CODE']
@@ -377,7 +377,7 @@ class dataWorkLoads():
                         _tran_val = "_".join([_alpha_key.lower(),_tran_key.lower()])
 
                     if _alpha_key.upper() == 'COUNTRY':
-                        self._data = dataWorkLoads.country_to_3661_1(
+                        self._data = dataWorkLoads.country_to_3166_1(
                             data = self._data,
                             get_code = _tran_key.upper(),
                             country_attr=t_iso[_alpha_key]['ATTRNAME'],
@@ -385,7 +385,7 @@ class dataWorkLoads():
                             **kwargs,
                         )
                     if _alpha_key.upper() == 'SUBDIV':
-                        self._data = dataWorkLoads.subdivision_to_3661_2(
+                        self._data = dataWorkLoads.subdivision_to_3166_2(
                             data = self._data,
                             get_code = _tran_key.upper(),
                             country_attr=t_iso[_alpha_key]['ATTRNAME'],
@@ -401,7 +401,7 @@ class dataWorkLoads():
         return self._data
 
 
-    ''' Function -- GET ISO 3661 --
+    ''' Function -- GET ISO 3166 --
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
@@ -467,7 +467,7 @@ class dataWorkLoads():
         return data
 
 
-    def reverse_iso_3661(
+    def reverse_iso_3166(
         self,
         data : any = None, # any dtype that can be converted to pyspark dataframe
         t_iso: dict=None,# dict of convertions and supporting values
@@ -476,7 +476,7 @@ class dataWorkLoads():
         """
         Description:
             For a given data set that can be transformed to a pyspark dataframe, the
-            identified iso-3661 columns with alpha2, alpha3, un, or subdivision codes
+            identified iso-3166 columns with alpha2, alpha3, un, or subdivision codes
             will fetch the respective values like name, type, and so on.
         Attributes :
             * data (any) dtype that can be converted to pyspark dataframe
@@ -485,11 +485,11 @@ class dataWorkLoads():
             self._data (DataFrame)  with the new columns
         """
 
-        __s_fn_id__ = f"{self.__name__} function <get_iso_3661>"
+        __s_fn_id__ = f"{self.__name__} function <get_iso_3166>"
         
         __def_get_keys__ = ['NAME', 'OFFICIAL', 'NUMERIC']
         __def_attr_keys__ = ['ALPHA2', 'ALPHA3', 'UN']
-        __def_3661_keys__ = ['COUNTRY', 'SUBDIVISIN']
+        __def_3166_keys__ = ['COUNTRY', 'SUBDIVISIN']
 
         try:
             self.data = data
@@ -498,30 +498,30 @@ class dataWorkLoads():
 
             ''' check if ATTRNAME and TRANSFORM are properly defined '''
             _remove_dict = {}
-            for _3661_key in t_iso.keys():
-                if _3661_key.upper() not in __def_3661_keys__:
-                    _err_msg = "invalid 3661 key {0} must be one of {1}"\
-                                .format(_3661_key.upper(),str(__def_3661_keys__))
-                    _remove_dict.update({_3661_key:_err_msg})
+            for _3166_key in t_iso.keys():
+                if _3166_key.upper() not in __def_3166_keys__:
+                    _err_msg = "invalid 3166 key {0} must be one of {1}"\
+                                .format(_3166_key.upper(),str(__def_3166_keys__))
+                    _remove_dict.update({_3166_key:_err_msg})
 
-                elif len([x for x in t_iso[_3661_key].keys() if x in __def_attr_keys__])<=0:
+                elif len([x for x in t_iso[_3166_key].keys() if x in __def_attr_keys__])<=0:
                     _err_msg = "missing attribute key must be one of {0}"\
                                 .format(str(__def_attr_keys__).upper())
-                    _remove_dict.update({_3661_key:_err_msg})
+                    _remove_dict.update({_3166_key:_err_msg})
 
-                elif "TRANSFORM" not in t_iso[_3661_key].keys():
-                    _err_msg = "missing key TRANSFORM for {0}".format(_3661_key.upper())
-                    _remove_dict.update({_3661_key:_err_msg})
+                elif "TRANSFORM" not in t_iso[_3166_key].keys():
+                    _err_msg = "missing key TRANSFORM for {0}".format(_3166_key.upper())
+                    _remove_dict.update({_3166_key:_err_msg})
 
-                elif len([x for x in t_iso[_3661_key]['TRANSFORM'].keys() 
+                elif len([x for x in t_iso[_3166_key]['TRANSFORM'].keys() 
                       if x.upper() not in __def_get_keys__]) > 0:
                     _err_msg = "one or more invalid TRANSFORM keys {0} did you mean one of {1}"\
-                                .format(str(t_iso[_3661_key]['TRANSFORM'].keys()),
+                                .format(str(t_iso[_3166_key]['TRANSFORM'].keys()),
                                         str(__def_get_keys__))
-                    _remove_dict.update({_3661_key:_err_msg})
+                    _remove_dict.update({_3166_key:_err_msg})
                 else:
                     logger.debug("%s verified ATTRNAME and TRANSFORM key/val pairs for %s",
-                                 __s_fn_id__, _3661_key.upper())
+                                 __s_fn_id__, _3166_key.upper())
 
             for _del_key, _del_msg in _remove_dict.items():
                 logger.error("%s removing key %s because %s", __s_fn_id__, _del_key, _del_msg)
@@ -534,24 +534,24 @@ class dataWorkLoads():
                          __s_fn_id__, len(t_iso))
 
             ''' now process the valid t_iso '''
-            for _3661_key in t_iso.keys():
+            for _3166_key in t_iso.keys():
                 ''' validate column name if in dataset '''
-                _col_name = [v for k,v in t_iso[_3661_key].items() if k in __def_attr_keys__][0]
+                _col_name = [v for k,v in t_iso[_3166_key].items() if k in __def_attr_keys__][0]
                 if _col_name not in data.columns:
                     raise ValueError("Column %s deos not match any dataset column names %s" % 
                                      (_col_name.upper(),str(data.columns).upper()))
-                for _tran_key, _tran_val in t_iso[_3661_key]['TRANSFORM'].items():
+                for _tran_key, _tran_val in t_iso[_3166_key]['TRANSFORM'].items():
                     ''' ensure return column name '''
                     if _tran_val is None or "".join(_tran_val.split())=="":
-                        _tran_val = "_".join([_3661_key.lower(),_tran_key.lower()])
+                        _tran_val = "_".join([_3166_key.lower(),_tran_key.lower()])
                         logger.warning("%s unspecified %s return colum set to default %s",
                                        __s_fn_id__, _tran_key.upper(), _tran_val.upper())
                     if _tran_val in data.columns:
                         raise ValueError("%s already a dataset column name; define a nother for %s" 
                                          % (_tran_val.upper(), _tran_key.upper()))
 
-                    if _3661_key.upper() == 'COUNTRY':
-                        _code_type = [k for k in t_iso[_3661_key].keys() if k in __def_attr_keys__][0]
+                    if _3166_key.upper() == 'COUNTRY':
+                        _code_type = [k for k in t_iso[_3166_key].keys() if k in __def_attr_keys__][0]
                         self._data = dataWorkLoads.iso_to_country(
                             data = self._data,
                             code_type= _code_type,

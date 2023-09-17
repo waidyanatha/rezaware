@@ -1729,3 +1729,79 @@ class dataWorkLoads():
 
         return table_info_sdf_
 
+    ''' - Functions --- SPARK POSTGRES BATCH UPSERT ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def get_table_pk_nextval(
+        self,
+        tbl_name:str=None,
+        pk_attr :str=None,
+        **options
+    ) -> DataFrame:
+        """
+        Description:
+            fetches the table next pk value
+        Attributes :
+            tbl_name (str) table name is mandatory
+            pk_attr (str) attribute name of serial primary key is mandatory
+            options (dict) - unnecesary
+        returns :
+            pk_sdf_ (DataFrame) nextval column
+        Exceptions:
+            * Validate the table is not empty
+            * Validate the pk attribute not empty
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <get_table_pk_nextval>"
+
+
+        try:
+            ''' validate database name '''
+            if tbl_name is None or "".join(tbl_name.split())=="":
+                raise AttributeError("Undefined tbl_name %s; specify a proper table name" 
+                                     % type(tbl_name))
+            if pk_attr is None or "".join(pk_attr.split())=="":
+                raise AttributeError("Undefined pk_attr %s; specify a proper primary key column" 
+                                     % type(pk_attr))
+            if self.dbType == 'postgresql':
+                ''' set the partitions '''
+                if "PARTITIONS" in options.keys():
+                    self.partitions = options['PARTITIONS']
+                if "FORMAT" in options.keys():
+                    self.rwFormat = options['FORMAT']
+                if "url" not in options.keys():
+                    options['url'] = self.dbConnURL
+                if "numPartitions" not in options.keys():
+                    options['numPartitions'] = self.partitions
+                if "user" not in options.keys():
+                    options['user'] = self.dbUser
+                if "password" not in options.keys():
+                    options['password'] = self.dbPswd
+                if "driver" not in options.keys():
+                    options['driver'] = self.dbDriver
+                ''' pre query '''
+                _query = "SELECT nextval(pg_get_serial_sequence"
+                _query += f"('{self._dbSchema}.{tbl_name}','{pk_attr}'))"
+                options['query'] = _query
+                
+                pk_sdf_ = self.session.read\
+                    .format(self.rwFormat)\
+                    .options(**options)\
+                    .load()
+                if not isinstance(pk_sdf_,DataFrame):
+                    raise RuntimeError("Failed reading %s table %s %s next value pk returned empty %s" 
+                                       % (f"{self._dbSchema}.{tbl_name}", self._dbType.upper(), 
+                                          self.dbName.upper(), type(pk_sdf_)))
+                logger.debug("%s returned %d rows and %d columns for %s table in %s %s",
+                             __s_fn_id__, pk_sdf_.count(), len(pk_sdf_.columns), 
+                             f"{self._dbSchema}.{tbl_name}",
+                             self._dbType.upper(), self.dbName.upper())
+
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return pk_sdf_

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
-''' Function --- BUILD APP STRUCTURE ---
+''' Function --- POPULATE UTIL REFER ---
     author: <nuwan.waidyanatha@rezgateway.com>
 '''
-def build_app_struct(
+def pop_util_ref(
     proj_dir= None,
     app:str = "rezaware",
     cfile:str="app.cfg",
@@ -154,12 +154,24 @@ def main():
         ''' get args from command line '''
         parser = argparse.ArgumentParser(description="setup main controller arg and flags")
         parser.add_argument("--apps", type=str)
-        parser.add_argument('--with_ini_files', action='store_true')
+        parser.add_argument("--database", type=str)
+        parser.add_argument("--storemode", type=str)
+        parser.add_argument("--storeroot", type=str)
+        parser.add_argument('--module', type=str)
         d = vars(parser.parse_args())
 
-        ''' process if list of apps are given '''
+        ''' process if list of APPS are given '''
         if "apps" in d.keys() and d["apps"] is not None and "".join(d["apps"].split())!="":
             _app_set = [s.strip() for s in d["apps"].split(",")]
+            logger.debug("%s apps to configure %s",__s_fn_id__,str(_app_set))
+        else:
+            _app_set=__apps_list__
+            logger.warning("%s unrecognized app list, reverting to default %s",
+                           __s_fn_id__,_app_set)
+
+        ''' process if list of MODULES are given '''
+        if "module" in d.keys() and d["module"] is not None and "".join(d["module"].split())!="":
+            _module_set = [s.strip() for s in d["module"].split(",")]
             logger.debug("%s apps to configure %s",__s_fn_id__,str(_app_set))
         else:
             _app_set=__apps_list__
@@ -169,10 +181,18 @@ def main():
         ''' get the parent folder '''
 #         parent_dir = os.path.abspath(os.path.join(cwd, os.pardir))
         parent_dir=os.path.abspath(os.pardir)
-        ''' setup and configure the four main apps with ini files '''
+        ''' find all the CSV files in app module default folders '''
         for _app in _app_set:
             try:
-                _app_conf = build_app_struct(
+                ''' get app modules from app.cfg file '''
+
+                ''' find the CSV files in app/module/defaul for util_ref'''
+                
+                ''' read the individual files and union into a dataframe '''
+                
+                ''' upsert the data in util_refer table '''
+
+                _app_def_file_lst = read_util_ref(
                     proj_dir=parent_dir,
                     app = _app,
                     cfile=__conf_fname__,
@@ -216,7 +236,8 @@ if __name__ == "__main__":
     __app__ = "rezaware"
     __ini_fname__ = "app.ini"
     __conf_fname__ = "app.cfg"
-    __apps_list__ = ['rezaware','wrangler','visuals','mining']
+    __apps_list__ = ['wrangler','visuals','mining']
+    __def_storemode__ = ['local-fs','aws-s3-bucket','google-storage']
 
     ''' Load necessary and sufficient python librairies that are used throughout the class'''
     try:

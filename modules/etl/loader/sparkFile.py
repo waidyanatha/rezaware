@@ -1419,7 +1419,7 @@ class dataWorkLoads():
             data,   # data to be stored
         ):
 
-            _s_fn_id = f"{self.__name__} function <wrapper_writer>"
+            __s_fn_id__ = f"{self.__name__} function <wrapper_writer>"
 
             try:
                 _file_path=func(self,file_name,folder_path,data)
@@ -1444,7 +1444,7 @@ class dataWorkLoads():
                     raise ValueError("Failed to strip file type extension from %s" 
                                      % file_name.upper())
                 logger.debug("%s File name %s is of file type %s", 
-                             _s_fn_id, file_name.upper(), _file_type.upper())
+                             __s_fn_id__, file_name.upper(), _file_type.upper())
     #             _file_type = file_name.rsplit('.',1)[1]
 
                 if isinstance(data,str):

@@ -545,7 +545,7 @@ class FeedWorkLoads():
     ''' Function --- CONSTRUCT URI DICT ---
         author(s) : nuwan.waidyanatha@rezgateway.com
     '''
-    @execFeeds
+#     @execFeeds
     def build_query_list(
         self,
         params_list:list = None,
