@@ -904,10 +904,10 @@ class dataWorkLoads():
         def wrapper_converter(self,
                  as_type:str,   # mandatory - define the data type to return
                  db_name:str,
-                 db_coll:str,      # mandatory - relative path, w.r.t. self.storeRoot
+                 db_coll:str,      # optional, will retrieve all collections if not specified
                  doc_find:dict={}, # optional - name of the file to read
 #                  doc_type:str=None    # optional - read all the files of same type
-                  **kwargs,
+                  **kwargs,        # HASINAME to 
                 ):
 
             __s_fn_id__ = f"{self.__name__} function <wrapper_converter>"
@@ -983,8 +983,6 @@ class dataWorkLoads():
             ''' read collections list from DB '''
             if len(db_coll)>0:
                 self.collections={"COLLLIST":db_coll}
-#             elif "HASINNAME" in kwargs.keys():
-#                 self.collections=kwargs
             elif isinstance(kwargs,dict):
                 self.collections=kwargs
             if self. _collections is None or len(self._collections)<=0:
