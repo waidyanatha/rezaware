@@ -189,7 +189,9 @@ class dataWorkLoads():
         __s_fn_id__ = f"{self.__name__} function <@property dbType>"
 
         try:
-            if self._dbType.lower() not in self._dbTypeList and appConf.has_option('DATABASE','DBTYPE'):
+            if (not isinstance(self._dbType, str) \
+                or self._dbType.lower() not in self._dbTypeList) \
+                and appConf.has_option('DATABASE','DBTYPE'):
                 self._dbType = appConf.get('DATABASE','DBTYPE')
                 logger.warning("%s improper class property, from %s, dbType set to default: %s",
                              __s_fn_id__, self.__conf_fname__.upper(), self._dbType.upper())
@@ -413,7 +415,8 @@ class dataWorkLoads():
                 raise ConnectionError("Invalid database SCHEMA %s" % db_schema.upper())
 
             self._dbSchema = db_schema
-            logger.debug("@setter Database dbSchema set to: %s",self._dbSchema.upper())
+            logger.debug("%s @setter Database dbSchema set to: %s",
+                         __s_fn_id__, self._dbSchema.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -453,7 +456,7 @@ class dataWorkLoads():
                 raise ConnectionError("Invalid database USER %s" % db_user)
 
             self._dbUser = db_user
-            logger.debug("@setter Database dbUser set to: %s",self._dbUser)
+            logger.debug("%s @setter Database dbUser set to: %s",__s_fn_id__, self._dbUser)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -537,28 +540,29 @@ class dataWorkLoads():
         return self._dbConnURL
 
     @dbConnURL.setter
-    def dbConnURL(self,**kwargs) -> str:
+    def dbConnURL(self,con_kwargs:dict) -> str:
+#     def dbConnURL(self,**kwargs) -> str:
 
         __s_fn_id__ = f"{self.__name__} function <@dbConnURL.setter>"
 
         try:
             ''' --- DATABASE PROPERTY **KWARGS --- '''
-            if "DBTYPE" in kwargs.keys():
-                self.dbType = kwargs['DBTYPE']
-            if "DBDRIVER" in kwargs.keys():
-                self.dbDriver = kwargs['DBDRIVER']
-            if "DBHOSTIP" in kwargs.keys():
-                self.dbHostIP = kwargs['DBHOSTIP']
-            if "DBPORT" in kwargs.keys():
-                self.dbPort = kwargs['DBPORT']
-            if "DBNAME" in kwargs.keys():
-                self.dbName = kwargs['DBNAME']
-            if "DBSCHEMA" in kwargs.keys():
-                self.dbSchema = kwargs['DBSCHEMA']
-            if "DBUSER" in kwargs.keys():
-                self.dbUser = kwargs['DBUSER']
-            if "DBPSWD" in kwargs.keys():
-                self.dbPswd = kwargs['DBPSWD']
+            if "DBTYPE" in con_kwargs.keys():
+                self.dbType = con_kwargs['DBTYPE']
+            if "DBDRIVER" in con_kwargs.keys():
+                self.dbDriver = con_kwargs['DBDRIVER']
+            if "DBHOSTIP" in con_kwargs.keys():
+                self.dbHostIP = con_kwargs['DBHOSTIP']
+            if "DBPORT" in con_kwargs.keys():
+                self.dbPort = con_kwargs['DBPORT']
+            if "DBNAME" in con_kwargs.keys():
+                self.dbName = con_kwargs['DBNAME']
+            if "DBSCHEMA" in con_kwargs.keys():
+                self.dbSchema = con_kwargs['DBSCHEMA']
+            if "DBUSER" in con_kwargs.keys():
+                self.dbUser = con_kwargs['DBUSER']
+            if "DBPSWD" in con_kwargs.keys():
+                self.dbPswd = con_kwargs['DBPSWD']
 
             self._dbConnURL = "jdbc:"+self.dbType+"://"+self.dbHostIP+":"+self.dbPort+"/"+self.dbName
             logger.debug("%s Database dbConnURL set to: %s", __s_fn_id__, self._dbConnURL.upper())
