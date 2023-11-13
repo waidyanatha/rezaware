@@ -1671,7 +1671,7 @@ class dataWorkLoads():
             self._data = data
             ''' determine where to save '''
             if file_path:
-                _csv_file_path = filesPath
+                _csv_file_path = file_path
                 logger.info("File ready to save to %s", _csv_file_path)
             else:
                 fname = __package__+"_"+"save_sdf_to.csv"
@@ -1684,12 +1684,13 @@ class dataWorkLoads():
 #            sdf.write.option("header",True)\
 #                    .option("delimiter",",")\
 #                    .csv(_csv_file_path)
-            sdf.write.mode(self._saveMode)\
+            self._data.write.mode(self._saveMode)\
                     .option("header",True)\
                     .format(self.rwFormat)\
                     .save(_csv_file_path)
 
-            logger.info("%d rows of data written to %s",sdf.count(), _csv_file_path)
+            logger.info("%d rows of data written to %s",
+                        self._data.count(), _csv_file_path)
 
         except Exception as err:
             logger.error("%s %s",__s_fn_id__, err)
