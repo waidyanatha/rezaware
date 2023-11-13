@@ -1681,9 +1681,6 @@ class dataWorkLoads():
             self.rwFormat = 'csv'
 
             ''' save sdf to csv '''
-#            sdf.write.option("header",True)\
-#                    .option("delimiter",",")\
-#                    .csv(_csv_file_path)
             self._data.write.mode(self._saveMode)\
                     .option("header",True)\
                     .format(self.rwFormat)\
