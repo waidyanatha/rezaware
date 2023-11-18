@@ -1649,7 +1649,7 @@ class dataWorkLoads():
 
 
 
-    ''' - Functions --- SPARK POSTGRES BATCH UPSERT ---
+    ''' - Functions --- DB TABLE INFO ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
@@ -1674,7 +1674,10 @@ class dataWorkLoads():
         """
 
         __s_fn_id__ = f"{self.__name__} function <get_db_table_info>"
-        
+
+        ''' returning sdf column name '''
+        __comm_tbl_name_col__="table_name"
+        __comm_schema_col__ = "schema_names"   
         __def_pg_db_info_tbl__= "information_schema.tables"
         __def_pg_schema_col__ = "table_schema"
 
@@ -1714,17 +1717,30 @@ class dataWorkLoads():
                     raise RuntimeError("Failed reading table info from %s %s returned empty %s" 
                                        % (self._dbType.upper(), self.dbName.upper(),
                                           type(table_info_sdf_)))
-                logger.debug("%s returned %d rows and %d columns for %s %s",
-                             __s_fn_id__, table_info_sdf_.count(), len(table_info_sdf_.columns), 
-                             self._dbType.upper(), self.dbName.upper())
-                ''' filter by Schema name '''
-                if self._dbSchema:
-                    table_info_sdf_ = table_info_sdf_.filter(
-                        F.col(__def_pg_schema_col__).isin([self._dbSchema])
-                    )
-                    logger.debug("%s filter for schema %s returned %d rows and %d columns",
-                                 __s_fn_id__, self._dbSchema.upper(), 
-                                 table_info_sdf_.count(), len(table_info_sdf_.columns))
+                ''' rename columns to common name '''
+                table_info_sdf_ = table_info_sdf_\
+                                    .withColumnRenamed("table_name",__comm_tbl_name_col__)\
+                                    .withColumnRenamed("table_schema",__comm_schema_col__)\
+#                 logger.debug("%s returned %d rows and %d columns for %s %s",
+#                              __s_fn_id__, table_info_sdf_.count(), len(table_info_sdf_.columns), 
+#                              self._dbType.upper(), self.dbName.upper())
+            elif self.dbType == 'bigquery':
+                pass
+            else:
+                raise AttributeError("Undefined dbType; something went wrong")
+            
+            logger.debug("%s returned %d rows and %d columns for %s %s",
+                         __s_fn_id__, table_info_sdf_.count(), len(table_info_sdf_.columns), 
+                         self._dbType.upper(), self.dbName.upper())
+
+            ''' filter by Schema name '''
+            if self._dbSchema:
+                table_info_sdf_ = table_info_sdf_.filter(
+                    F.col(__comm_schema_col__).isin([self._dbSchema])
+                )
+                logger.debug("%s filter for schema %s returned %d rows and %d columns",
+                             __s_fn_id__, self._dbSchema.upper(), 
+                             table_info_sdf_.count(), len(table_info_sdf_.columns))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1733,7 +1749,81 @@ class dataWorkLoads():
 
         return table_info_sdf_
 
-    ''' - Functions --- SPARK POSTGRES BATCH UPSERT ---
+    ''' - Functions --- GET TABLE SCHEMA ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def get_table_schema(
+        self,
+        tbl_name : str = None,
+        db_schema:str = None,
+        **options
+    ) -> DataFrame:
+        """
+        Description:
+            fetches the table information, such as catelog, schema, name of all or specific
+                tables from the specified database and schema
+                Necessary to validate the table exisits before performing an CRUD actions
+        Attributes :
+            db_name (str) database name is mandatory
+            kwargs (dict)
+                DBSCHEMA (str) if not defined will list tables for all schemas
+        returns :
+            table_info_sdf_ (DataFrame)
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <get_table_schema>"
+        
+        __def_pg_db_info_tbl__= "information_schema.tables"
+        __def_pg_schema_col__ = "table_schema"
+
+        try:
+            ''' validate database name '''
+            if tbl_name is None or "".join(tbl_name.split())=="":
+                raise AttributeError("Unspecified empty %s" % type(tbl_name))
+            if db_schema is not None and "".join(db_schema.split())!="":
+                self.dbSchema = db_schema
+            if self.dbType == 'postgresql':
+                ''' set the partitions '''
+                if "PARTITIONS" in options.keys():
+                    self.partitions = options['PARTITIONS']
+                if "FORMAT" in options.keys():
+                    self.rwFormat = options['FORMAT']
+                if "url" not in options.keys():
+                    options['url'] = self.dbConnURL
+                if "numPartitions" not in options.keys():
+                    options['numPartitions'] = self.partitions
+                if "user" not in options.keys():
+                    options['user'] = self.dbUser
+                if "password" not in options.keys():
+                    options['password'] = self.dbPswd
+                if "driver" not in options.keys():
+                    options['driver'] = self.dbDriver
+#                 if "dbtable" not in options.keys() or "".join(options['dbtable'])=="":
+#                     options['dbtable'] = __def_pg_db_info_tbl__
+
+                _query = f"SELECT * FROM {self.dbSchema}.{tbl_name} LIMIT 1"
+                tbl_schema_ = None
+                tbl_schema_ = self.read_data_from_table(
+                    select=_query,
+                    **options
+                ).schema
+                _tbl_fields_lst = [field.name for field in tbl_schema_.fields]
+                if len(_tbl_fields_lst)<=0:
+                    raise ValueError("Unable to recover field names from table %s, returned empty %s" 
+                                     % (tbl_name, type(_tbl_fields_lst)))
+                logger.debug("%s %s fields list: %s", __s_fn_id__, tbl_name, _tbl_fields_lst)
+
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return tbl_schema_
+
+
+    ''' - Functions --- SPARK POSTGRES TABLE PK NEXTVAL ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
