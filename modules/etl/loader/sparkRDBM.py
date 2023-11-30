@@ -1899,3 +1899,102 @@ class dataWorkLoads():
             print("[Error]"+__s_fn_id__, err)
 
         return pk_sdf_
+
+    ''' - Functions --- SPARK POSTGRES TABLE PK NEXTVAL ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def set_table_pk_lastval(
+        self,
+        tbl_name:str=None,
+        pk_attr :str=None,
+        set_val :int=None,
+        **options
+    ) -> DataFrame:
+        """
+        Description:
+            set the table next pk value
+        Attributes :
+            tbl_name (str) table name is mandatory
+            pk_attr (str) attribute name of serial primary key is mandatory
+            options (dict) - unnecesary
+        returns :
+            pk_sdf_ (DataFrame) nextval column
+        Exceptions:
+            * Validate the table is not empty
+            * Validate the pk attribute not empty
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <set_table_pk_lastval>"
+
+
+        try:
+            ''' validate database name '''
+            if tbl_name is None or "".join(tbl_name.split())=="":
+                raise AttributeError("Undefined tbl_name %s; specify a proper table name" 
+                                     % type(tbl_name))
+            if pk_attr is None or "".join(pk_attr.split())=="":
+                raise AttributeError("Undefined pk_attr %s; specify a proper primary key column" 
+                                     % type(pk_attr))
+            if self.dbType == 'postgresql':
+                ''' set the partitions '''
+                if "PARTITIONS" in options.keys():
+                    self.partitions = options['PARTITIONS']
+                if "FORMAT" in options.keys():
+                    self.rwFormat = options['FORMAT']
+                if "url" not in options.keys():
+                    options['url'] = self.dbConnURL
+                if "numPartitions" not in options.keys():
+                    options['numPartitions'] = self.partitions
+                if "user" not in options.keys():
+                    options['user'] = self.dbUser
+                if "password" not in options.keys():
+                    options['password'] = self.dbPswd
+                if "driver" not in options.keys():
+                    options['driver'] = self.dbDriver
+
+                ''' decide on value to set with '''
+                _query = f"SELECT max({pk_attr}) as max_val FROM {self._dbSchema}.{tbl_name}"
+                options['query'] = _query
+                ''' get the value '''
+                pk_deq_sdf_ = self.session.read\
+                    .format(self.rwFormat)\
+                    .options(**options)\
+                    .load()
+                if not isinstance(pk_deq_sdf_,DataFrame) or pk_deq_sdf_.count()<1:
+                    raise RuntimeError("Failed reading %s table %s %s next value pk returned empty %s" 
+                                       % (f"{self._dbSchema}.{tbl_name}", self._dbType.upper(), 
+                                          self.dbName.upper(), type(pk_deq_sdf_)))
+                _new_val = pk_deq_sdf_.select('max_val').collect()[0][0]
+                if not isinstance(_new_val,int):
+                    _new_val=1
+                if not isinstance(set_val, int) or set_val <= _new_val:
+                    set_val = _new_val
+                    logger.warning("%s invalid %s primary key value; setting to default %d",
+                                   __s_fn_id__, pk_attr.upper(), set_val)
+
+                ''' set the value in sequence table '''
+                _query = f"SELECT setval('{self._dbSchema}.{tbl_name}_{pk_attr}_seq', {set_val}, true)"
+                options['query'] = _query
+                ''' get the value '''
+                pk_deq_sdf_ = self.session.read\
+                    .format(self.rwFormat)\
+                    .options(**options)\
+                    .load()
+                if not isinstance(pk_deq_sdf_,DataFrame) or pk_deq_sdf_.count()<1:
+                    raise RuntimeError("Failed setting %s table %s %s new value pk returned empty %s" 
+                                       % (f"{self._dbSchema}.{tbl_name}", self._dbType.upper(), 
+                                          self.dbName.upper(), type(pk_deq_sdf_)))
+                set_val = pk_deq_sdf_.select('setval').collect()[0][0]
+                logger.debug("%s Successfully set %s primary key nextval to %d %s table in %s %s",
+                             __s_fn_id__, pk_attr.upper(), set_val, 
+                             f"{self._dbSchema}.{tbl_name}".upper(),
+                             self._dbType.upper(), self.dbName.upper())
+
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return set_val

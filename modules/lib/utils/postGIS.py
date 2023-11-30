@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "reference"
-__package__= "utils"
+__name__ = "postGIS"
 __module__ = "lib"
+__package__ = "utils"
 __app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
@@ -20,8 +20,12 @@ try:
     import findspark
     findspark.init()
     from pyspark.sql import functions as F
+#     from pyspark.sql.functions import lit, current_timestamp
     from pyspark.sql import DataFrame
-    from datetime import datetime, date, timedelta
+    from google.cloud import storage   # handles GCS reads and writes
+    import pandas as pd
+    import numpy as np
+    import json
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -31,33 +35,41 @@ except Exception as e:
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
-    CLASS configure the master hotel details, groups, lookups, and locations
+    CLASS process postGIS geometry data queries for specific database, schema, and tables.
+
+        Makes uses of
+        * sparkRDBM for reading and writing date from and to database tables
+        * each database schema will have a deafult table location_geom with
+            table attributes for holding any of the database entity gis data
 
     Contributors:
         * nuwan.waidyanatha@rezgateway.com
+        * samana.thetha@gmail.com
 
     Resources:
-
+        https://postgis.net/docs/en/using_postgis_dbmanagement.html
 '''
-
 class dataWorkLoads():
-
     ''' Function --- INIT ---
+    
+        author: <nuwan.waidyanatha@rezgateway.com>
 
-            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def __init__(
         self, 
-        desc,
+        desc : str = None,   # identifier for the instances
         realm:str= None,
-        category:str=None,
-        **kwargs):
+        feature:str=None,
+        **kwargs,
+    ):
         """
-        Decription:
-            Initializes the ExtractFeatures: class property attributes, app configurations, 
-                logger function, data store directory paths, and global classes 
+        Description:
+            Initializes the postGIS dataWorkloads: class property attributes, app 
+            configurations, logger function, data store directory paths, and global classes
         Attributes:
-            desc (str) identify the specific instantiation and purpose
+            desc (str) to change the instance description for identification
+            db_name (str),
+            db_schema (str),
         Returns:
             None
         """
@@ -68,27 +80,29 @@ class dataWorkLoads():
         self.__app__ = __app__
         self.__ini_fname__ = __ini_fname__
         self.__conf_fname__ = __conf_fname__
-        if desc is None or "".join(desc.split())=="":
-            self.__desc__ = " ".join([self.__app__,self.__module__,
-                                      self.__package__,self.__name__])
-        else:
+        if desc is not None or "".join(desc.split())!="":
             self.__desc__ = desc
+        else:
+            self.__desc__ = " ".join([self.__app__, self.__module__, self.__package__, self.__name__])
 
-        self._tbl_name = "util_refer"
+        ''' Initialize property var to hold the data '''
+        self._tbl_name = "util_gis_geom"
         self._data = None
         self._realm= realm
         self._realm_list=None
-        self._category = category
-        self._category_list=None
+        self._feature = feature
+        self._feature_list=None
+#         self._dbName = db_name     # sets the database to interact with
+#         self._dbSchema=db_schema # specifies the schema
 
-        global pkgConf
-        global appConf
-        global logger
-        global clsSDB
+        ''' initiate to load app.cfg data '''
+        global logger  # inherits the utils logger class
+        global pkgConf # inherits package app.ini config data
+        global clsSDB  # inherits the loader sparkRDBM dataWorkLoads
         global clsFile
 
         __s_fn_id__ = f"{self.__name__} function <__init__>"
-        
+
         try:
             self.cwd=os.path.dirname(__file__)
             pkgConf = configparser.ConfigParser()
@@ -105,11 +119,13 @@ class dataWorkLoads():
                 module=self.__module__,
                 package=self.__package__,
                 ini_file=self.__ini_fname__)
-
             ''' set a new logger section '''
             logger.info('########################################################')
-            logger.info("%s Class",self.__name__)
+            logger.info("%s %s",self.__name__,self.__package__)
 
+#             ''' instantiate sparkRDBM dataWorkLoads '''
+#             from rezaware.modules.etl.loader import sparkRDBM as db
+#             clsSDB = db.dataWorkLoads(desc=self.__desc__)
             ''' import sparkRDBM dataworkload to read/write data from/to rdbms'''
             from rezaware.modules.etl.loader import sparkRDBM as db
             clsSDB = db.dataWorkLoads(
@@ -143,12 +159,14 @@ class dataWorkLoads():
                 f_store_root= _store_root,
             )
 
+
+            logger.info("%s Connection complete! ready to load data.",__s_fn_id__)
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
-                         %(self.__app__,
-                           self.__module__,
-                           self.__package__,
-                           self.__name__,
-                           self.__desc__))
+                         %(self.__app__.upper(),
+                           self.__module__.upper(),
+                           self.__package__.upper(),
+                           self.__name__.upper(),
+                           self.__desc__.upper()))
 
             print("%s Class initialization complete" % self.__name__)
 
@@ -167,10 +185,17 @@ class dataWorkLoads():
     ''' --- DATA --- '''
     @property
     def data(self):
+        """ @propert data function
+
+            supports a class decorator @property that is used for getting the
+            instance specific datafame. The data must be a pyspark dataframe
+            and if it is not one, the function will try to convert the to a 
+            pyspark dataframe.
+
+            return self._data (pyspark dataframe)
+        """
 
         __s_fn_id__ = f"{self.__name__} function <@property data>"
-
-#         __def_tbl_name__ = "util_refer"
 
         try:
             ''' validate property value '''
@@ -179,17 +204,17 @@ class dataWorkLoads():
                 _query +=f"WHERE deactivate_dt IS NULL "
                 self._data = clsSDB.read_data_from_table(select=_query)
                 if self._data is None or self._data.count()<=0:
-                    raise RuntimeError("Failed to retrieve %s realm data" % self._realm)
-                logger.warning("%s read %d rows of data for %s realm", 
-                               __s_fn_id__, self._data.count(), self._realm)
-            if not isinstance(self._data,DataFrame):
+                    raise RuntimeError("Failed to retrieve geom data from %s" % self._tbl_name)
+                logger.warning("%s read %d rows of geom data", 
+                               __s_fn_id__, self._data.count())
+            if not isinstance(self._data, DataFrame):
                 self._data = self.session.createDataFrame(self._data)
                 logger.warning("%s non-pyspark dataset converted to %s with %d rows and %d columns", 
                                __s_fn_id__, type(self._data), 
                                self_.data.count(), len(self_.data.columns))
             if self._data.count() <= 0:
-                raise AttributeError("No records in property data; empty %s" % type(self._data)) 
-                
+                raise AttributeError("No records geom data; empty %s" % type(self._data)) 
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
@@ -199,6 +224,13 @@ class dataWorkLoads():
 
     @data.setter
     def data(self,data):
+        """ @data.setter function
+
+            supports the class propert for setting the instance specific data. 
+            The data must not be None-Type and must be a pyspark dataframe.
+
+            return self._data (pyspark dataframe)
+        """
 
         __s_fn_id__ = f"{self.__name__} function <@data.setter>"
 
@@ -213,14 +245,13 @@ class dataWorkLoads():
                          self._data.count(),len(self._data.columns))
             else:
                 self._data = data
-
+                
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
         return self._data
-
 
     ''' --- REALM LIST --- '''
     @property
@@ -285,97 +316,105 @@ class dataWorkLoads():
 
         return self._realm
 
-    ''' --- CAEGORY --- '''
+    ''' --- FEATURE --- '''
     @property
-    def category(self):
+    def feature(self):
 
-        __s_fn_id__ = f"{self.__name__} function <@property category>"
+        __s_fn_id__ = f"{self.__name__} function <@property feature>"
 
         try:
             ''' validate category value '''
-            if self._category not in self.category_list:
-                raise AttributeError("Unspecified class property category, %s" % type(self._category))
+            if self._feature not in self.feature_list:
+                raise AttributeError("Unspecified class property feature, %s" % type(self._category))
                 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._category
+        return self._feature
 
-    @category.setter
-    def category(self,category):
+    @feature.setter
+    def feature(self,feature):
 
-        __s_fn_id__ = f"{self.__name__} function <@category.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@feature.setter>"
 
         try:
-            ''' validate property value '''
-            if not isinstance(category, str) or "".join(category.split())=="":
+            ''' validate feature '''
+            if not isinstance(feature, str) or "".join(feature.split())=="":
                 raise AttributeError("Cannot set class property with empty %s" 
-                                     % type(category))
+                                     % type(feature))
 
-            self._category = category
+            self._feature = feature
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._category
+        return self._feature
 
 
-    ''' --- CATEGORY LIST --- '''
+    ''' --- FEATURE LIST --- '''
     @property
-    def category_list(self):
+    def feature_list(self):
+        """
+        Description:
+            A realm can have multiple features that categorically describe the geometry
+        Attributes()
+        Returns:
+            self.feature_list
+        """
 
-        __s_fn_id__ = f"{self.__name__} function <@property category_list>"
+        __s_fn_id__ = f"{self.__name__} function <@property feature_list>"
 
         try:
             ''' validate category_list value '''
-            if not isinstance(self._category_list, list) or len(self._category_list)<=0:
-                self._category_list = [x[0] for x in 
+            if not isinstance(self._feature_list, list) or len(self._feature_list)<=0:
+                self._feature_list = [x[0] for x in 
                                        self.data\
                                        .filter(F.col('realm').isin(self._realm))\
-                                       .select("category").distinct().collect()]
+                                       .select("feature").distinct().collect()]
                 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._category_list
+        return self._feature_list
 
 
-    ''' Function --- GET REFERENCE ---
+    ''' Function --- READ GEOM DATA ---
 
         author(s): <nuwan.waidyanatha@rezgateway.com>
     '''
-    def get_reference(
+    def read_geom(
         self,
         realm: str = None,
-        category:str=None,
+        feature:str=None,
         **kwargs
     ) -> DataFrame:
         """
         """
 
-        __s_fn_id__ = f"{self.__name__} function <@property get_reference>"
+        __s_fn_id__ = f"{self.__name__} function <@property read_geom>"
 
         try:
-            filt_ref_=self.data
+            filt_gis_=self.data
             if isinstance(realm,str) and "".join(realm.split())!="":
                 self.realm = realm
-                filt_ref_=filt_ref_.filter(F.col('realm').isin(self._realm))
-            if isinstance(category,str) and "".join(category.split())!="":
-                self.category=category
-                filt_ref_=filt_ref_.filter(F.col('category').isin(self._category))
+                filt_gis_=filt_gis_.filter(F.col('realm').isin(self._realm))
+            if isinstance(feature,str) and "".join(feature.split())!="":
+                self.feature=feature
+                filt_gis_=filt_gis_.filter(F.col('feature').isin(self._feature))
 
-            if not isinstance(filt_ref_, DataFrame) or filt_ref_.count()<=0:
-                raise RuntimeError("returned %s empty reference data for %s realm and %s category" 
-                                   % (type(filt_ref_), self._realm, self._category))
-            self._data = filt_ref_
-            logger.debug("%s filtered %d rows for %s realm and %s category", 
-                         __s_fn_id__, self._data.count(), self._realm, self._category)
+            if not isinstance(filt_gis_, DataFrame) or filt_gis_.count()<=0:
+                raise RuntimeError("returned %s empty gis data for %s realm and %s feature" 
+                                   % (type(filt_gis_), self._realm, self._feature))
+            self._data = filt_gis_
+            logger.debug("%s filtered %d rows for %s realm and %s feature", 
+                         __s_fn_id__, self._data.count(), 
+                         self._realm.upper(), self._feature.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -385,11 +424,17 @@ class dataWorkLoads():
         return self._data
 
 
-    ''' Function --- IMPORT TO RDBM  ---
+    ''' Function --- WRITE GEOM DATA ---
 
         author(s): <nuwan.waidyanatha@rezgateway.com>
     '''
-    def uspert_data(func):
+
+
+    ''' TODO Function --- IMPORT TO RDBM  ---
+        
+        author(s): <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def uspert_geom(func):
 
         @functools.wraps(func)
         def upsert_wrapper(self,folder_path,file_type,db_name,db_schema,**kwargs):
@@ -398,8 +443,8 @@ class dataWorkLoads():
 
             __s_fn_id__ = f"{self.__name__} function <upsert_wrapper>"
             
-            _tbl_name='util_refer'
-            _pk = 'ref_pk'
+            _tbl_name='util_geom'
+            _pk = 'gis_pk'
             _cols_not_for_update = ['created_dt','created_by','created_proc']
             _options={
                 "BATCHSIZE":1000,   # batch size to partition the dtaframe
@@ -409,9 +454,9 @@ class dataWorkLoads():
             }
 
             try:
-                ref_data_ = func(self,folder_path,file_type,db_name,db_schema,**kwargs)
-                if not isinstance(ref_data_,DataFrame) or ref_data_.count()<=0:
-                    raise AttributeError("Cannot process empty %s dataset" % type(ref_data_))
+                geom_data_ = func(self,folder_path,file_type,db_name,db_schema,**kwargs)
+                if not isinstance(geom_data_,DataFrame) or geom_data_.count()<=0:
+                    raise AttributeError("Cannot process empty %s dataset" % type(geom_data_))
 
                 ''' verify database attributes '''
                 if not isinstance(db_name,str) or "".join(db_name.split())=="":
@@ -440,7 +485,7 @@ class dataWorkLoads():
                     raise ValueError("Unable to recover field names from table %s, returned empty %s" 
                                      % (_tbl_name, type(_tbl_fields_lst)))
                 logger.debug("%s %s fields list: %s", __s_fn_id__, _tbl_name, _tbl_fields_lst)
-                _filter_sdf = ref_data_.drop(*[x for x in ref_data_.columns 
+                _filter_sdf = geom_data_.drop(*[x for x in geom_data_.columns 
                                          if x not in _tbl_fields_lst])
                 if len(_filter_sdf.columns)<=0:
                     raise UnboundLocalError("Unmatched schema columns returned %d filtered columns"
@@ -487,7 +532,7 @@ class dataWorkLoads():
 
         return upsert_wrapper
 
-    @uspert_data
+    @uspert_geom
     def import_to_db(
         self,
         folder_path:str=None,
