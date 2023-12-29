@@ -1067,8 +1067,10 @@ class dataWorkLoads():
         try:
             ''' validate property value '''
             if self._partitions is None and appConf.has_option('SPARK','PARTITIONS'):
-                self._partitions = appConf.get('SPARK','PARTITIONS')
-                logger.warning("%s improper class property partitions, from %s, set to deafault: %s",
+                self._partitions = int(appConf.get('SPARK','PARTITIONS'))
+            elif self._partitions is None and not appConf.has_option('SPARK','PARTITIONS'):
+                self._partitions = os.cpu_count()
+                logger.warning("%s improper class property partitions, from %s, set to deafault: %d",
                              __s_fn_id__, self.__conf_fname__.upper(), self._partitions)
 
         except Exception as err:
@@ -1079,17 +1081,20 @@ class dataWorkLoads():
         return self._partitions
 
     @partitions.setter
-    def partitions(self,num_partitions:int=2):
+    def partitions(self,num_partitions:int):
 
         __s_fn_id__ = f"{self.__name__} function <@partitions.setter>"
 
         try:
             ''' validate property value '''
             if num_partitions <= 0:
-                raise ConnectionError("Invalid  %d spark NUMBER of PARTIONS" % num_partitions)
-
-            self._partitions = num_partitions
-            logger.debug("%s class property partitions set to: %s", __s_fn_id__, self._partitions)
+#                 raise ConnectionError("Invalid  %d spark NUMBER of PARTIONS" % num_partitions)
+                self._partitions = os.cpu_count()
+                logger.warning("%s invalid class property input num_partitions, setting to default %d",
+                             __s_fn_id__, self._partitions)
+            else:
+                self._partitions = num_partitions
+                logger.debug("%s class property partitions set to: %d", __s_fn_id__, self._partitions)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
