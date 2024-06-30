@@ -357,15 +357,7 @@ class Config(ConfigParser):
 
         return [*set(_ini_conf_file_list)]
 
-    ''' Function
-            name: set_cfg_file_data
-            parameters:
-                reza_cwd (str) - rezaware directory path
-                app_name (str) - mining, utils, visuals, or wrangler
-                conf_file (str)- generally app.cfg
-                cfg_dict (dict)- dictionary with secotor specific key value pairs
-            procedure: 
-            return None
+    ''' Function -- WRITE TO APP.CFG
             
             author: <nuwan.waidyanatha@rezgateway.com>
 
@@ -375,6 +367,15 @@ class Config(ConfigParser):
         app_name,
         conf_file,
         cfg_dict) -> str:
+        """
+                    parameters:
+                reza_cwd (str) - rezaware directory path
+                app_name (str) - mining, utils, visuals, or wrangler
+                conf_file (str)- generally app.cfg
+                cfg_dict (dict)- dictionary with secotor specific key value pairs
+            procedure: 
+            return None
+        """
 
         _new_conf_file = None
 
@@ -400,7 +401,41 @@ class Config(ConfigParser):
 
         return _new_conf_file
 
-    
+    def apply_conf_params(
+        reza_cwd :str,
+        app_name :str,
+        app_path :str,
+        conf_file:str,
+    ) -> str:
+
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
+
+        try:
+            conf_data = Config.get_config(
+                cwd=reza_cwd,
+                app=app_name,
+                fName = conf_file,
+            )
+
+            if "DATABASE" not in conf_data.sections():
+                print("%s [WARNING] SQL DB undefined in %s proceeding without DB config" 
+                      % (__s_fn_id__, fName))
+            else:
+                if "".join(conf_data.get["DATABASE","DBUSER"])!="":
+                    ''' set the dbuser in .bashrc '''
+                    print("%s stand by" % (__s_fn_id__))
+                
+
+            conf_file_path=None
+
+        except Exception as e:
+            print("Error create_ini_files {0} with error:\n{1}".format(__package__,e))
+            print(traceback.format_exc())
+
+        finally:
+            return conf_file_path
+
+
 
 '''
     *** CLASS LOGGER ***

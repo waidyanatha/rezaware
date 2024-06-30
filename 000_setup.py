@@ -153,8 +153,9 @@ def main():
         from utils import Config as conf
         ''' get args from command line '''
         parser = argparse.ArgumentParser(description="setup main controller arg and flags")
-        parser.add_argument("--apps", type=str)
-        parser.add_argument('--with_ini_files', action='store_true')
+        parser.add_argument("--apps", type=str)   # comma separated list of apps
+        parser.add_argument('--with_ini_files', action='store_true') # creates an app.ini all packages
+        parser.add_argument('--run_conf_files', action='store_true') # exec app.cfg of all apps
         d = vars(parser.parse_args())
 
         ''' process if list of apps are given '''
@@ -191,6 +192,19 @@ def main():
                         raise RuntimeError("create_ini_files function return empty %s file list"
                                            % type(_app_ini_list))
                     logger.debug("%s generated files: %s",__s_fn_id__,str(_app_ini_list))
+
+                ''' apply app.cfg specific methods (e.g. store user/pswd env vars '''
+                if "run_conf_files" in d.keys() and d["run_conf_files"]:
+                    _app_conf_list = conf.apply_conf_params(
+                        reza_cwd=parent_dir,
+                        app_name=_app,
+                        app_path=os.path.join(parent_dir,_app),
+                        conf_file=__conf_fname__,
+                    )
+                    if _app_ini_list is None or len(_app_ini_list)<=0:
+                        raise RuntimeError("apply conf params return empty %s file list"
+                                           % type(_app_ini_list))
+                    logger.debug("%s applied conf params: %s",__s_fn_id__,str(_app_ini_list))
 
             except Exception as _app_err:
                 logger.warning("%s app %s had errors %s",__s_fn_id__, _app.upper(),_app_err)
