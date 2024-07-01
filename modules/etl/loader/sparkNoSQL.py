@@ -3,11 +3,11 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "sparkNoSQL"
-__module__ = "etl"
 __package__ = "loader"
+__module__ = "etl"
 __app__ = "rezaware"
 __ini_fname__ = "app.ini"
-__conf_fname__ = "app.cfg"
+__conf_fname__= "app.cfg"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -59,8 +59,8 @@ class dataWorkLoads(attr.properties):
                  db_type: str = None, # database type postgres (preferred), mysql, etc
                  db_name : str = None,
                  db_format:str = None,
-                 db_user : str = None,
-                 db_pswd : str = None,
+#                  db_user : str = None,
+#                  db_pswd : str = None,
                  db_auth_source : str = None,
                  db_auth_mechanism:str=None,
                  desc:str = "noSQL DB collection and document CRUD",
@@ -79,14 +79,20 @@ class dataWorkLoads(attr.properties):
         else:
             self.__desc__ = desc
 
+        ''' instantiate property attributes '''
+        super().__init__(
+            desc=self.__desc__,
+            realm="NOSQLDB"
+        )
+        
 #         ''' --- NoSQL DB properties --- '''
 #         self._dbHostIP = None
 #         self._dbPort = None
         self._dbType = db_type
         self._dbName = db_name #None
         self._dbFormat = db_format #None
-        self._dbUser = db_user #None
-        self._dbPswd = db_pswd #None
+#         self._dbUser = db_user #None
+#         self._dbPswd = db_pswd #None
         self._dbAuthSource = db_auth_source       #None
         self._dbAuthMechanism = db_auth_mechanism #None
 #         self._collections = None
@@ -117,11 +123,11 @@ class dataWorkLoads(attr.properties):
 #         ''' --- SPARK properties --- '''
 #         self._sparkMaster =  None
 
-        ''' instantiate property attributes '''
-        super().__init__(
-            desc=self.__desc__,
-            realm="NOSQLDB"
-        )
+#         ''' instantiate property attributes '''
+#         super().__init__(
+#             desc=self.__desc__,
+#             realm="NOSQLDB"
+#         )
         
         ''' initiate to load app.cfg data '''
         global logger

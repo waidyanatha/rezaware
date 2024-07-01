@@ -3,8 +3,8 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "sparkRDBM"
-__module__ = "etl"
 __package__ = "loader"
+__module__ = "etl"
 __app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
@@ -27,6 +27,8 @@ try:
     from typing import List, Iterable, Dict, Tuple
     from psycopg2 import connect, DatabaseError
     from psycopg2.extras import execute_values
+
+    from rezaware.modules.etl.loader import propAttr as attr
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -54,7 +56,7 @@ except Exception as e:
             * Many thanks to Santhanu's medium article and code snipets for generating the
                 upsert_sdf_to_db function https://tinyurl.com/pyspark-batch-upsert
 '''
-class dataWorkLoads():
+class dataWorkLoads(attr.properties):
 
     def __init__(
         self, 
@@ -65,8 +67,8 @@ class dataWorkLoads():
         db_port : str = None,
         db_name : str = None,
         db_schema:str = None,
-        db_user : str = None,
-        db_pswd : str = None,
+#         db_user : str = None,
+#         db_pswd : str = None,
         spark_partitions:int=None,
         spark_format:str = None,
         spark_save_mode:str=None,
@@ -92,6 +94,12 @@ class dataWorkLoads():
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
+        ''' instantiate property attributes '''
+        super().__init__(
+            desc=self.__desc__,
+            realm="DATABASE"
+        )
+
         ''' default values '''
         self._dbTypeList=['postgresql', 'bigquery']
         self._formatList=['jdbc','bigquery']
@@ -102,31 +110,37 @@ class dataWorkLoads():
         self._dbPort = db_port
         self._dbName = db_name
         self._dbSchema=db_schema
-        self._dbUser = db_user
-        self._dbPswd = db_pswd
-        self._partitions=spark_partitions
-        self._dbConnURL = None
+#         self._dbUser = db_user
+#         self._dbPswd = db_pswd
+#         self._dbConnURL = None
 
-        ''' Initialize spark session parameters '''
-        self._homeDir = None
-        self._binDir = None
-        self._config = None
-        self._appName = None
-        self._master = None
+#         ''' Initialize spark session parameters '''
+#         self._homeDir = None
+#         self._binDir = None
+#         self._config = None
+#         self._appName = None
+#         self._master = None
+        self._partitions=spark_partitions
         self._jarDir = spark_jar_dir
         self._rwFormat = spark_format
         self._saveMode = spark_save_mode
-        self._session = None
+#         self._session = None
 
-        ''' Initialize property var to hold the data '''
-        self._data = None
+#         ''' Initialize property var to hold the data '''
+#         self._data = None
 
-        __s_fn_id__ = f"{self.__name__} function <__init__>"
-
+#         ''' instantiate property attributes '''
+#         super().__init__(
+#             desc=self.__desc__,
+#             realm="NOSQLDB"
+#         )
+        
         ''' initiate to load app.cfg data '''
         global logger
         global pkgConf
         global appConf
+
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
 
         try:
             self.cwd=os.path.dirname(__file__)
@@ -171,937 +185,937 @@ class dataWorkLoads():
 
         return None
 
-    ''' Function --- SPARK DB PROPERTIES ---
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    ''' --- DB TYPE --- '''
-    @property
-    def dbType(self) -> str:
-        """
-        Description: 
-            session @property and @setter functions
-            @property - if None try __conf_file__; else throw exception
-            @setter - if None or Empty throw exception; else set it
-        Attributes: 
-        Return self._* (* is the property attribute name)
-        """
-
-        __s_fn_id__ = f"{self.__name__} function <@property dbType>"
-
-        try:
-            if (not isinstance(self._dbType, str) \
-                or self._dbType.lower() not in self._dbTypeList) \
-                and appConf.has_option('DATABASE','DBTYPE'):
-                self._dbType = appConf.get('DATABASE','DBTYPE')
-                logger.warning("%s improper class property, from %s, dbType set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbType.upper())
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
-
-        return self._dbType.lower()
-
-    @dbType.setter
-    def dbType(self,db_type:str='') -> str:
-
-        __s_fn_id__ = f"{self.__name__} function <@dbType.setter>"
-
-        try:
-            ''' validate property value '''
-            if db_type.lower() not in self._dbTypeList:
-                raise ConnectionError("Invalid database type %s must be one of %s" 
-                                      % (db_type.upper(), str(self._dbTypeList).upper()))
-            ''' set valid property with value '''
-            self._dbType = db_type.lower()
-            logger.debug("%s dbType is: %s",__s_fn_id__, self._dbType.upper())
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
-
-        return self._dbType
-
-    ''' --- DRIVER --- '''
-    @property
-    def dbDriver(self) -> str:
-
-        __s_fn_id__ = f"{self.__name__} function <@property dbDriver>"
-
-        try:
-            ''' validate property value '''
-            if not isinstance(self._dbDriver,str) and appConf.has_option('DATABASE','DBDRIVER'):
-                self._dbDriver = appConf.get('DATABASE','DBDRIVER')
-                logger.warning("%s improper class property dbDriver, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbDriver.upper())
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
-
-        return self._dbDriver
-
-    @dbDriver.setter
-    def dbDriver(self,db_driver:str='') -> str:
-
-        __s_fn_id__ = f"{self.__name__} function <@dbDriver.setter>"
-
-        try:
-            ''' validate property value '''
-            if not isinstance(db_driver,str) or "".join(db_driver.strip()) == "":
-                raise ConnectionError("Invalid database DRIVER %s" % db_driver)
-
-            self._dbDriver = db_driver
-            logger.debug("%s class propert Database dbDriver set to: %s", __s_fn_id__, self._dbDriver)
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
-
-        return self._dbDriver
-
-    ''' --- IP --- '''
-    @property
-    def dbHostIP(self) -> str:
+#     ''' Function --- SPARK DB PROPERTIES ---
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     ''' --- DB TYPE --- '''
+#     @property
+#     def dbType(self) -> str:
+#         """
+#         Description: 
+#             session @property and @setter functions
+#             @property - if None try __conf_file__; else throw exception
+#             @setter - if None or Empty throw exception; else set it
+#         Attributes: 
+#         Return self._* (* is the property attribute name)
+#         """
+
+#         __s_fn_id__ = f"{self.__name__} function <@property dbType>"
+
+#         try:
+#             if (not isinstance(self._dbType, str) \
+#                 or self._dbType.lower() not in self._dbTypeList) \
+#                 and appConf.has_option('DATABASE','DBTYPE'):
+#                 self._dbType = appConf.get('DATABASE','DBTYPE')
+#                 logger.warning("%s improper class property, from %s, dbType set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbType.upper())
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return self._dbType.lower()
+
+#     @dbType.setter
+#     def dbType(self,db_type:str='') -> str:
+
+#         __s_fn_id__ = f"{self.__name__} function <@dbType.setter>"
+
+#         try:
+#             ''' validate property value '''
+#             if db_type.lower() not in self._dbTypeList:
+#                 raise ConnectionError("Invalid database type %s must be one of %s" 
+#                                       % (db_type.upper(), str(self._dbTypeList).upper()))
+#             ''' set valid property with value '''
+#             self._dbType = db_type.lower()
+#             logger.debug("%s dbType is: %s",__s_fn_id__, self._dbType.upper())
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return self._dbType
+
+#     ''' --- DRIVER --- '''
+#     @property
+#     def dbDriver(self) -> str:
+
+#         __s_fn_id__ = f"{self.__name__} function <@property dbDriver>"
+
+#         try:
+#             ''' validate property value '''
+#             if not isinstance(self._dbDriver,str) and appConf.has_option('DATABASE','DBDRIVER'):
+#                 self._dbDriver = appConf.get('DATABASE','DBDRIVER')
+#                 logger.warning("%s improper class property dbDriver, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbDriver.upper())
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return self._dbDriver
+
+#     @dbDriver.setter
+#     def dbDriver(self,db_driver:str='') -> str:
+
+#         __s_fn_id__ = f"{self.__name__} function <@dbDriver.setter>"
+
+#         try:
+#             ''' validate property value '''
+#             if not isinstance(db_driver,str) or "".join(db_driver.strip()) == "":
+#                 raise ConnectionError("Invalid database DRIVER %s" % db_driver)
+
+#             self._dbDriver = db_driver
+#             logger.debug("%s class propert Database dbDriver set to: %s", __s_fn_id__, self._dbDriver)
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return self._dbDriver
+
+#     ''' --- IP --- '''
+#     @property
+#     def dbHostIP(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property dbHostIP>"
+#         __s_fn_id__ = f"{self.__name__} function <@property dbHostIP>"
 
-        try:
-            ''' validate property value '''
-            if self._dbHostIP is None and appConf.has_option('DATABASE','DBHOSTIP'):
-                self._dbHostIP = appConf.get('DATABASE','DBHOSTIP')
-                logger.warning("%s improper class property dbHostIP, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbHostIP)
+#         try:
+#             ''' validate property value '''
+#             if self._dbHostIP is None and appConf.has_option('DATABASE','DBHOSTIP'):
+#                 self._dbHostIP = appConf.get('DATABASE','DBHOSTIP')
+#                 logger.warning("%s improper class property dbHostIP, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbHostIP)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbHostIP
+#         return self._dbHostIP
 
-    @dbHostIP.setter
-    def dbHostIP(self,db_host_ip:str='127.0.0.1') -> str:
+#     @dbHostIP.setter
+#     def dbHostIP(self,db_host_ip:str='127.0.0.1') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@dbHostIP.setter >"
+#         __s_fn_id__ = f"{self.__name__} function <@dbHostIP.setter >"
 
-        try:
-            ''' validate property value '''
-            if db_host_ip is None or "".join(db_host_ip.strip()) == "":
-                raise ConnectionError("Invalid database host IP %s" % db_host_ip)
+#         try:
+#             ''' validate property value '''
+#             if db_host_ip is None or "".join(db_host_ip.strip()) == "":
+#                 raise ConnectionError("Invalid database host IP %s" % db_host_ip)
 
-            self._dbHostIP = db_host_ip
-            logger.debug("%s Database dbHostIP set to: %s", __s_fn_id__, self._dbHostIP)
+#             self._dbHostIP = db_host_ip
+#             logger.debug("%s Database dbHostIP set to: %s", __s_fn_id__, self._dbHostIP)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbHostIP
+#         return self._dbHostIP
 
-    ''' --- PORT --- '''
-    @property
-    def dbPort(self) -> str:
+#     ''' --- PORT --- '''
+#     @property
+#     def dbPort(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property dbPort>"
+#         __s_fn_id__ = f"{self.__name__} function <@property dbPort>"
 
-        try:
-            ''' validate property value '''
-            if self._dbPort is None and appConf.has_option('DATABASE','DBPORT'):
-                self._dbPort = appConf.get('DATABASE','DBPORT')
-                logger.warning("%s improper class property Port, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbPort)
+#         try:
+#             ''' validate property value '''
+#             if self._dbPort is None and appConf.has_option('DATABASE','DBPORT'):
+#                 self._dbPort = appConf.get('DATABASE','DBPORT')
+#                 logger.warning("%s improper class property Port, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbPort)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return str(self._dbPort)
+#         return str(self._dbPort)
 
-    @dbPort.setter
-    def dbPort(self,db_port:int=5432) -> str:
+#     @dbPort.setter
+#     def dbPort(self,db_port:int=5432) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@dbPort.setter dbPort>"
+#         __s_fn_id__ = f"{self.__name__} function <@dbPort.setter dbPort>"
 
-        try:
-            ''' validate property value '''
-            if db_port is None or not isinstance(db_type,int):
-                raise ConnectionError("Invalid database port integer %s" % str(db_port))
+#         try:
+#             ''' validate property value '''
+#             if db_port is None or not isinstance(db_type,int):
+#                 raise ConnectionError("Invalid database port integer %s" % str(db_port))
 
-            self._dbPort = str(db_port)
-            logger.debug("%s Database Port set to: %s", __s_fn_id__, self._dbPort)
+#             self._dbPort = str(db_port)
+#             logger.debug("%s Database Port set to: %s", __s_fn_id__, self._dbPort)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbPort
+#         return self._dbPort
 
-    ''' --- NAME --- '''
-    @property
-    def dbName(self):
+#     ''' --- NAME --- '''
+#     @property
+#     def dbName(self):
 
-        __s_fn_id__ = f"{self.__name__} function <@property dbName>"
+#         __s_fn_id__ = f"{self.__name__} function <@property dbName>"
 
-        try:
-            ''' validate property value '''
-            if self._dbName is None and appConf.has_option('DATABASE','DBNAME'):
-                self._dbName = appConf.get('DATABASE','DBNAME')
-                logger.warning("%s improper class Database dbName, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbName.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._dbName is None and appConf.has_option('DATABASE','DBNAME'):
+#                 self._dbName = appConf.get('DATABASE','DBNAME')
+#                 logger.warning("%s improper class Database dbName, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbName.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbName
+#         return self._dbName
 
-    @dbName.setter
-    def dbName(self,db_name:str=''):
+#     @dbName.setter
+#     def dbName(self,db_name:str=''):
 
-        __s_fn_id__ = f"{self.__name__} function <@dbName.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@dbName.setter>"
 
-        try:
-            ''' validate property value '''
-            if db_name is None or "".join(db_name.strip()) == "":
-                raise ConnectionError("Invalid database NAME %s" % db_name)
+#         try:
+#             ''' validate property value '''
+#             if db_name is None or "".join(db_name.strip()) == "":
+#                 raise ConnectionError("Invalid database NAME %s" % db_name)
 
-            self._dbName = db_name
-            logger.debug("%s class property dbName set to: %s",__s_fn_id__,self._dbName)
+#             self._dbName = db_name
+#             logger.debug("%s class property dbName set to: %s",__s_fn_id__,self._dbName)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbName
+#         return self._dbName
 
-    ''' --- SCHEMA --- '''
-    @property
-    def dbSchema(self) -> str:
+#     ''' --- SCHEMA --- '''
+#     @property
+#     def dbSchema(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property dbSchema>"
+#         __s_fn_id__ = f"{self.__name__} function <@property dbSchema>"
 
-        try:
-            ''' validate property value '''
-            if self._dbSchema is None and appConf.has_option('DATABASE','DBSCHEMA'):
-                self._dbSchema = appConf.get('DATABASE','DBSCHEMA')
-                logger.warning("%s improper class property dbSchema, from %s, set to: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbSchema.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._dbSchema is None and appConf.has_option('DATABASE','DBSCHEMA'):
+#                 self._dbSchema = appConf.get('DATABASE','DBSCHEMA')
+#                 logger.warning("%s improper class property dbSchema, from %s, set to: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbSchema.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbSchema
+#         return self._dbSchema
 
-    @dbSchema.setter
-    def dbSchema(self,db_schema:str='') -> str:
+#     @dbSchema.setter
+#     def dbSchema(self,db_schema:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@dbSchema.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@dbSchema.setter>"
 
-        try:
-            ''' validate property value '''
-            if db_schema is None or "".join(db_schema.strip()) == "":
-                raise ConnectionError("Invalid database SCHEMA %s" % db_schema.upper())
+#         try:
+#             ''' validate property value '''
+#             if db_schema is None or "".join(db_schema.strip()) == "":
+#                 raise ConnectionError("Invalid database SCHEMA %s" % db_schema.upper())
 
-            self._dbSchema = db_schema
-            logger.debug("%s @setter Database dbSchema set to: %s",
-                         __s_fn_id__, self._dbSchema.upper())
+#             self._dbSchema = db_schema
+#             logger.debug("%s @setter Database dbSchema set to: %s",
+#                          __s_fn_id__, self._dbSchema.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbSchema
+#         return self._dbSchema
 
-    ''' --- USER --- '''
-    @property
-    def dbUser(self) -> str:
+#     ''' --- USER --- '''
+#     @property
+#     def dbUser(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property dbUser>"
+#         __s_fn_id__ = f"{self.__name__} function <@property dbUser>"
 
-        try:
-            ''' validate property value '''
-            if self._dbUser is None and appConf.has_option('DATABASE','DBUSER'):
-                self._dbUser = appConf.get('DATABASE','DBUSER')
-                logger.debug("%s improper class property dbUser, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbUser.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._dbUser is None and appConf.has_option('DATABASE','DBUSER'):
+#                 self._dbUser = appConf.get('DATABASE','DBUSER')
+#                 logger.debug("%s improper class property dbUser, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbUser.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbUser
+#         return self._dbUser
 
-    @dbUser.setter
-    def dbUser(self,db_user:str='') -> str:
+#     @dbUser.setter
+#     def dbUser(self,db_user:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@dbPswd.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@dbPswd.setter>"
 
-        try:
-            ''' validate property value '''
-            if db_user is None or "".join(db_user.strip()) == "":
-                raise ConnectionError("Invalid database USER %s" % db_user)
+#         try:
+#             ''' validate property value '''
+#             if db_user is None or "".join(db_user.strip()) == "":
+#                 raise ConnectionError("Invalid database USER %s" % db_user)
 
-            self._dbUser = db_user
-            logger.debug("%s @setter Database dbUser set to: %s",__s_fn_id__, self._dbUser)
+#             self._dbUser = db_user
+#             logger.debug("%s @setter Database dbUser set to: %s",__s_fn_id__, self._dbUser)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbUser
+#         return self._dbUser
 
-    ''' --- PASSWORD --- '''
-    @property
-    def dbPswd(self) -> str:
+#     ''' --- PASSWORD --- '''
+#     @property
+#     def dbPswd(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property dbPswd>"
+#         __s_fn_id__ = f"{self.__name__} function <@property dbPswd>"
 
-        try:
-            ''' validate property value '''
-            if self._dbPswd is None and appConf.has_option('DATABASE','DBPSWD'):
-                self._dbPswd = appConf.get('DATABASE','DBPSWD')
-                logger.warning("%s improper class property dbPswd, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._dbPswd.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._dbPswd is None and appConf.has_option('DATABASE','DBPSWD'):
+#                 self._dbPswd = appConf.get('DATABASE','DBPSWD')
+#                 logger.warning("%s improper class property dbPswd, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._dbPswd.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbPswd
+#         return self._dbPswd
 
-    @dbPswd.setter
-    def dbPswd(self,db_password:str='') -> str:
+#     @dbPswd.setter
+#     def dbPswd(self,db_password:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@session.setter dbPswd>"
-
-        try:
-            ''' validate property value '''
-            if db_password is None or "".join(db_password.strip()) == "":
-                raise ConnectionError("Invalid database PASSWORD %s" % db_password.upper())
+#         __s_fn_id__ = f"{self.__name__} function <@session.setter dbPswd>"
+
+#         try:
+#             ''' validate property value '''
+#             if db_password is None or "".join(db_password.strip()) == "":
+#                 raise ConnectionError("Invalid database PASSWORD %s" % db_password.upper())
 
-            self._dbPswd = db_password
-            logger.debug("%s Database dbPswd set to: %s", __s_fn_id__, self._dbPswd.upper())
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
-
-        return self._dbPswd
-
-    ''' Function
-            name: reset_type to the original data type
-            parameters:
-
-            procedure: 
-            return self._dbConnURL
+#             self._dbPswd = db_password
+#             logger.debug("%s Database dbPswd set to: %s", __s_fn_id__, self._dbPswd.upper())
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return self._dbPswd
+
+#     ''' Function
+#             name: reset_type to the original data type
+#             parameters:
+
+#             procedure: 
+#             return self._dbConnURL
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @property
-    def dbConnURL(self) -> str:
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @property
+#     def dbConnURL(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property dbConnURL>"
+#         __s_fn_id__ = f"{self.__name__} function <@property dbConnURL>"
 
-        try:
-            ''' validate property value '''
-            if self._dbConnURL is None and \
-                not self.dbType is None and \
-                not self.dbHostIP is None and \
-                not self.dbPort is None and \
-                not self.dbName is None:
-                self._dbConnURL = "jdbc:"+self.dbType+\
-                                    "://"+self.dbHostIP+":"+\
-                                    self.dbPort+"/"+self.dbName
-            logger.warning("%s NoneType class property dbConnURL set to default: %s",
-                           __s_fn_id__, self._dbConnURL.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._dbConnURL is None and \
+#                 not self.dbType is None and \
+#                 not self.dbHostIP is None and \
+#                 not self.dbPort is None and \
+#                 not self.dbName is None:
+#                 self._dbConnURL = "jdbc:"+self.dbType+\
+#                                     "://"+self.dbHostIP+":"+\
+#                                     self.dbPort+"/"+self.dbName
+#             logger.warning("%s NoneType class property dbConnURL set to default: %s",
+#                            __s_fn_id__, self._dbConnURL.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug("%s",traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug("%s",traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbConnURL
+#         return self._dbConnURL
 
-    @dbConnURL.setter
-    def dbConnURL(self,con_kwargs:dict) -> str:
-#     def dbConnURL(self,**kwargs) -> str:
+#     @dbConnURL.setter
+#     def dbConnURL(self,con_kwargs:dict) -> str:
+# #     def dbConnURL(self,**kwargs) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@dbConnURL.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@dbConnURL.setter>"
 
-        try:
-            ''' --- DATABASE PROPERTY **KWARGS --- '''
-            if "DBTYPE" in con_kwargs.keys():
-                self.dbType = con_kwargs['DBTYPE']
-            if "DBDRIVER" in con_kwargs.keys():
-                self.dbDriver = con_kwargs['DBDRIVER']
-            if "DBHOSTIP" in con_kwargs.keys():
-                self.dbHostIP = con_kwargs['DBHOSTIP']
-            if "DBPORT" in con_kwargs.keys():
-                self.dbPort = con_kwargs['DBPORT']
-            if "DBNAME" in con_kwargs.keys():
-                self.dbName = con_kwargs['DBNAME']
-            if "DBSCHEMA" in con_kwargs.keys():
-                self.dbSchema = con_kwargs['DBSCHEMA']
-            if "DBUSER" in con_kwargs.keys():
-                self.dbUser = con_kwargs['DBUSER']
-            if "DBPSWD" in con_kwargs.keys():
-                self.dbPswd = con_kwargs['DBPSWD']
+#         try:
+#             ''' --- DATABASE PROPERTY **KWARGS --- '''
+#             if "DBTYPE" in con_kwargs.keys():
+#                 self.dbType = con_kwargs['DBTYPE']
+#             if "DBDRIVER" in con_kwargs.keys():
+#                 self.dbDriver = con_kwargs['DBDRIVER']
+#             if "DBHOSTIP" in con_kwargs.keys():
+#                 self.dbHostIP = con_kwargs['DBHOSTIP']
+#             if "DBPORT" in con_kwargs.keys():
+#                 self.dbPort = con_kwargs['DBPORT']
+#             if "DBNAME" in con_kwargs.keys():
+#                 self.dbName = con_kwargs['DBNAME']
+#             if "DBSCHEMA" in con_kwargs.keys():
+#                 self.dbSchema = con_kwargs['DBSCHEMA']
+#             if "DBUSER" in con_kwargs.keys():
+#                 self.dbUser = con_kwargs['DBUSER']
+#             if "DBPSWD" in con_kwargs.keys():
+#                 self.dbPswd = con_kwargs['DBPSWD']
 
-            self._dbConnURL = "jdbc:"+self.dbType+"://"+self.dbHostIP+":"+self.dbPort+"/"+self.dbName
-            logger.debug("%s Database dbConnURL set to: %s", __s_fn_id__, self._dbConnURL.upper())
+#             self._dbConnURL = "jdbc:"+self.dbType+"://"+self.dbHostIP+":"+self.dbPort+"/"+self.dbName
+#             logger.debug("%s Database dbConnURL set to: %s", __s_fn_id__, self._dbConnURL.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug("%s",traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug("%s",traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbConnURL
+#         return self._dbConnURL
 
-    ''' Function --- SPARK SESSION PROPERTIES ---
-            name: session @property and @setter functions
-            parameters:
+#     ''' Function --- SPARK SESSION PROPERTIES ---
+#             name: session @property and @setter functions
+#             parameters:
 
-            procedure: 
-                @property - if None try __conf_file__; else throw exception
-                @setter - if None or Empty throw exception; else set it
-            return self._* (* is the property attribute name)
+#             procedure: 
+#                 @property - if None try __conf_file__; else throw exception
+#                 @setter - if None or Empty throw exception; else set it
+#             return self._* (* is the property attribute name)
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    ''' --- HOMEDIR --- '''
-    ''' TODO - check if evn var $SPARK_HOME and $JAVA_HOME is set '''
-    @property
-    def homeDir(self) -> str:
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     ''' --- HOMEDIR --- '''
+#     ''' TODO - check if evn var $SPARK_HOME and $JAVA_HOME is set '''
+#     @property
+#     def homeDir(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property homeDir>"
+#         __s_fn_id__ = f"{self.__name__} function <@property homeDir>"
 
-        try:
-            ''' validate property value '''
-            if self._homeDir is None and appConf.has_option('SPARK','HOMEDIR'):
-                self._homeDir = appConf.get('SPARK','HOMEDIR')
-                logger.warning("%s improper class property homeDir, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._homeDir.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._homeDir is None and appConf.has_option('SPARK','HOMEDIR'):
+#                 self._homeDir = appConf.get('SPARK','HOMEDIR')
+#                 logger.warning("%s improper class property homeDir, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._homeDir.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._homeDir
+#         return self._homeDir
 
-    @homeDir.setter
-    def homeDir(self,home_dir:str='') -> str:
+#     @homeDir.setter
+#     def homeDir(self,home_dir:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@homeDir.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@homeDir.setter>"
 
-        try:
-            ''' validate property value '''
-            if home_dir is None or "".join(home_dir.strip()) == "":
-                raise ConnectionError("Invalid spark HOMEDIR %s" % home_dir.upper())
+#         try:
+#             ''' validate property value '''
+#             if home_dir is None or "".join(home_dir.strip()) == "":
+#                 raise ConnectionError("Invalid spark HOMEDIR %s" % home_dir.upper())
 
-            self._homeDir = home_dir
-            logger.debug("%s Spark homeDir set to: %s", __s_fn_id__, self._homeDir.upper())
+#             self._homeDir = home_dir
+#             logger.debug("%s Spark homeDir set to: %s", __s_fn_id__, self._homeDir.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._homeDir
+#         return self._homeDir
 
-    ''' --- BINDIR --- '''
-    @property
-    def binDir(self) -> str:
+#     ''' --- BINDIR --- '''
+#     @property
+#     def binDir(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property binDir>"
+#         __s_fn_id__ = f"{self.__name__} function <@property binDir>"
 
-        try:
-            ''' validate property value '''
-            if self._binDir is None and appConf.has_option('SPARK','BINDIR'):
-                self._binDir = appConf.get('SPARK','BINDIR')
-                logger.warning("%s improper class property binDir, from %s, set to: default %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._binDir.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._binDir is None and appConf.has_option('SPARK','BINDIR'):
+#                 self._binDir = appConf.get('SPARK','BINDIR')
+#                 logger.warning("%s improper class property binDir, from %s, set to: default %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._binDir.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._binDir
+#         return self._binDir
 
-    @binDir.setter
-    def binDir(self,bin_dir:str='') -> str:
+#     @binDir.setter
+#     def binDir(self,bin_dir:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@binDir.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@binDir.setter>"
 
-        try:
-            ''' validate property value '''
-            if bin_dir is None or "".join(bin_dir.strip()) == "":
-                raise ConnectionError("Invalid spark BINDIR %s" % bin_dir.upper())
+#         try:
+#             ''' validate property value '''
+#             if bin_dir is None or "".join(bin_dir.strip()) == "":
+#                 raise ConnectionError("Invalid spark BINDIR %s" % bin_dir.upper())
 
-            self._binDir = bin_dir
-            logger.debug("%s Spark binDir set to: %s",self._binDir.upper())
+#             self._binDir = bin_dir
+#             logger.debug("%s Spark binDir set to: %s",self._binDir.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._binDir
+#         return self._binDir
 
-    ''' --- APPNAME --- '''
-    @property
-    def appName(self) -> str:
+#     ''' --- APPNAME --- '''
+#     @property
+#     def appName(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property appName>"
+#         __s_fn_id__ = f"{self.__name__} function <@property appName>"
 
-        try:
-            ''' validate property value '''
-            if self._appName is None or "".join(self._appName.split())=="":
-                self._appName = " ".join([self.__app__,
-                                          self.__module__,
-                                          self.__package__,
-                                          self.__name__])
-                logger.warning("%s improper class property appName set to default: %s",
-                             __s_fn_id__, self._appName.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._appName is None or "".join(self._appName.split())=="":
+#                 self._appName = " ".join([self.__app__,
+#                                           self.__module__,
+#                                           self.__package__,
+#                                           self.__name__])
+#                 logger.warning("%s improper class property appName set to default: %s",
+#                              __s_fn_id__, self._appName.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._appName
+#         return self._appName
 
-    @appName.setter
-    def appName(self,app_name:str='') -> str:
+#     @appName.setter
+#     def appName(self,app_name:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@appName.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@appName.setter>"
 
-        try:
-            ''' validate property value '''
-            if app_name is None or "".join(app_name.strip()) == "":
-                raise ConnectionError("Invalid spark APPNAME %s" % app_name.upper())
+#         try:
+#             ''' validate property value '''
+#             if app_name is None or "".join(app_name.strip()) == "":
+#                 raise ConnectionError("Invalid spark APPNAME %s" % app_name.upper())
 
-            self._appName = app_name
-            logger.debug("%s Spark appName set to: %s",__s_fn_id__, self._appName.upper())
+#             self._appName = app_name
+#             logger.debug("%s Spark appName set to: %s",__s_fn_id__, self._appName.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._appName
+#         return self._appName
 
-    ''' --- CONFIG --- '''
-    @property
-    def config(self) -> str:
+#     ''' --- CONFIG --- '''
+#     @property
+#     def config(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property config>"
+#         __s_fn_id__ = f"{self.__name__} function <@property config>"
 
-        try:
-            ''' validate property value '''
-            if self._config is None and appConf.has_option('SPARK','CONFIG'):
-                self._config = appConf.get('SPARK','CONFIG')
-                logger.warning("%s improper class property Spark config, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._config.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._config is None and appConf.has_option('SPARK','CONFIG'):
+#                 self._config = appConf.get('SPARK','CONFIG')
+#                 logger.warning("%s improper class property Spark config, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._config.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._config
+#         return self._config
 
-    @config.setter
-    def config(self,config:str='') -> str:
+#     @config.setter
+#     def config(self,config:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@config.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@config.setter>"
 
-        try:
-            ''' validate property value '''
-            if config is None or "".join(config.strip()) == "":
-                raise ConnectionError("Invalid spark CONFIG %s" % config.upper())
+#         try:
+#             ''' validate property value '''
+#             if config is None or "".join(config.strip()) == "":
+#                 raise ConnectionError("Invalid spark CONFIG %s" % config.upper())
 
-            self._config = config
-            logger.debug("%s Spark config set to: %s", __s_fn_id__, self._config.upper())
+#             self._config = config
+#             logger.debug("%s Spark config set to: %s", __s_fn_id__, self._config.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._config
+#         return self._config
 
-    ''' --- JARDIR --- '''
-    @property
-    def jarDir(self) -> str:
+#     ''' --- JARDIR --- '''
+#     @property
+#     def jarDir(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property jarDir>"
+#         __s_fn_id__ = f"{self.__name__} function <@property jarDir>"
 
-        try:
-            ''' validate property value '''
-            if self._jarDir is None and appConf.has_option('SPARK','JARDIR'):
-                self._jarDir = appConf.get('SPARK','JARDIR')
-                logger.warning("%s improper class property Spark jarDir, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._jarDir.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._jarDir is None and appConf.has_option('SPARK','JARDIR'):
+#                 self._jarDir = appConf.get('SPARK','JARDIR')
+#                 logger.warning("%s improper class property Spark jarDir, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._jarDir.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._jarDir
+#         return self._jarDir
 
-    @jarDir.setter
-    def jarDir(self,jar_dir:str='') -> str:
+#     @jarDir.setter
+#     def jarDir(self,jar_dir:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@jarDir.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@jarDir.setter>"
 
-        try:
-            ''' validate property value '''
-            if jar_dir is None or "".join(jar_dir.strip()) == "":
-                raise ConnectionError("Invalid spark JARDIR %s" % jar_dir.upper())
+#         try:
+#             ''' validate property value '''
+#             if jar_dir is None or "".join(jar_dir.strip()) == "":
+#                 raise ConnectionError("Invalid spark JARDIR %s" % jar_dir.upper())
 
-            self._jarDir = jar_dir
-            logger.debug("@setter Spark jarDir set to: %s",self._jarDir.upper())
+#             self._jarDir = jar_dir
+#             logger.debug("@setter Spark jarDir set to: %s",self._jarDir.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._jarDir
+#         return self._jarDir
 
-    ''' --- MASTER --- '''
-    @property
-    def master(self) -> str:
+#     ''' --- MASTER --- '''
+#     @property
+#     def master(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property master>"
+#         __s_fn_id__ = f"{self.__name__} function <@property master>"
 
-        try:
-            ''' validate property value '''
-            if self._master is None and appConf.has_option('SPARK','MASTER'):
-                self._master = appConf.get('SPARK','MASTER')
-                logger.warning("%s improper class property Spark master, from %s, set to default: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._master.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._master is None and appConf.has_option('SPARK','MASTER'):
+#                 self._master = appConf.get('SPARK','MASTER')
+#                 logger.warning("%s improper class property Spark master, from %s, set to default: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._master.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._master
+#         return self._master
 
-    @master.setter
-    def master(self,master:str='local[1]') -> str:
+#     @master.setter
+#     def master(self,master:str='local[1]') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@master.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@master.setter>"
 
-        try:
-            ''' validate property value '''
-            if master is None or "".join(master.strip()) == "":
-                self._master = "local[1]"
-                logger.warning("SparkSession master set to default: %s",self._master.upper())
+#         try:
+#             ''' validate property value '''
+#             if master is None or "".join(master.strip()) == "":
+#                 self._master = "local[1]"
+#                 logger.warning("SparkSession master set to default: %s",self._master.upper())
 
-            self._master = master
-            logger.debug("%s Spark master set to: %s", __s_fn_id__, self._master.upper())
+#             self._master = master
+#             logger.debug("%s Spark master set to: %s", __s_fn_id__, self._master.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._master
+#         return self._master
 
-    ''' --- RWFORMAT --- '''
-    @property
-    def rwFormat(self) -> str:
+#     ''' --- RWFORMAT --- '''
+#     @property
+#     def rwFormat(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property rwFormat>"
+#         __s_fn_id__ = f"{self.__name__} function <@property rwFormat>"
 
-        try:
-            ''' validate property value '''
-            if self._rwFormat is None \
-                or self._rwFormat.lower() not in self._formatList \
-                and appConf.has_option('SPARK','FORMAT'):
-                self._rwFormat = appConf.get('SPARK','FORMAT')
-                logger.warning("%s improper class property rwFormat, from %s, set to default: %s",
-                               __s_fn_id__, self.__conf_fname__.upper(), self._rwFormat.upper())
+#         try:
+#             ''' validate property value '''
+#             if self._rwFormat is None \
+#                 or self._rwFormat.lower() not in self._formatList \
+#                 and appConf.has_option('SPARK','FORMAT'):
+#                 self._rwFormat = appConf.get('SPARK','FORMAT')
+#                 logger.warning("%s improper class property rwFormat, from %s, set to default: %s",
+#                                __s_fn_id__, self.__conf_fname__.upper(), self._rwFormat.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._rwFormat.lower()
+#         return self._rwFormat.lower()
 
-    @rwFormat.setter
-    def rwFormat(self,rw_format:str) -> str:
+#     @rwFormat.setter
+#     def rwFormat(self,rw_format:str) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@rwFormat.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@rwFormat.setter>"
 
-        try:
-            ''' validate property value '''
-            if rw_format.lower() not in self._formatList:
-                raise ConnectionError("Invalid calss propert rwFormat %s, must be one of %s" 
-                                      % (rw_format.upper(),str(self._formatList)))
+#         try:
+#             ''' validate property value '''
+#             if rw_format.lower() not in self._formatList:
+#                 raise ConnectionError("Invalid calss propert rwFormat %s, must be one of %s" 
+#                                       % (rw_format.upper(),str(self._formatList)))
 
-            self._rwFormat = rw_format
-            logger.debug("%s class property rwFormat set to: %s", __s_fn_id__, self._rwFormat.upper())
+#             self._rwFormat = rw_format
+#             logger.debug("%s class property rwFormat set to: %s", __s_fn_id__, self._rwFormat.upper())
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._rwFormat.lower()
+#         return self._rwFormat.lower()
 
 
-    ''' --- SAVEMODE --- '''
-    @property
-    def saveMode(self) -> str:
+#     ''' --- SAVEMODE --- '''
+#     @property
+#     def saveMode(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property saveMode>"
+#         __s_fn_id__ = f"{self.__name__} function <@property saveMode>"
 
-        try:
-            ''' validate property value '''
-            if self._saveMode is None and appConf.has_option('SPARK','SAVEMODE'):
-                self._saveMode = appConf.get('SPARK','SAVEMODE')
-                logger.warning("%s improper class propert saveMode, from %s, set to: %s",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._saveMode)
+#         try:
+#             ''' validate property value '''
+#             if self._saveMode is None and appConf.has_option('SPARK','SAVEMODE'):
+#                 self._saveMode = appConf.get('SPARK','SAVEMODE')
+#                 logger.warning("%s improper class propert saveMode, from %s, set to: %s",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._saveMode)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._saveMode
+#         return self._saveMode
 
-    @saveMode.setter
-    def saveMode(self,save_mode:str='Append') -> str:
+#     @saveMode.setter
+#     def saveMode(self,save_mode:str='Append') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
 
-        try:
-            ''' validate property value '''
-            if save_mode not in ['Append','Overwrite']:
-                raise ConnectionError("Invalid spark SAVEMODE %s" % save_mode)
+#         try:
+#             ''' validate property value '''
+#             if save_mode not in ['Append','Overwrite']:
+#                 raise ConnectionError("Invalid spark SAVEMODE %s" % save_mode)
 
-            self._saveMode = save_mode
-            logger.debug("%s class propert saveMode set to: %s", __s_fn_id__, self._saveMode)
+#             self._saveMode = save_mode
+#             logger.debug("%s class propert saveMode set to: %s", __s_fn_id__, self._saveMode)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._saveMode
+#         return self._saveMode
 
 
-    ''' Function --- SPARK SESSION ---
+#     ''' Function --- SPARK SESSION ---
     
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @property
-    def session(self):
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @property
+#     def session(self):
 
-        __s_fn_id__ = f"{self.__name__} function <@property session>"
+#         __s_fn_id__ = f"{self.__name__} function <@property session>"
 
-        try:
-            ''' validate property value '''
-            if self._session is None and \
-                self.homeDir is not None and \
-                self.appName is not None and \
-                self.config is not None and \
-                self.jarDir is not None and \
-                self.master is not None:
-                findspark.init(self.homeDir)
-                from pyspark.sql import SparkSession
-                logger.debug("%s importing %s library from spark dir: %s"
-                         % (__s_fn_id__,SparkSession.__name__, self.homeDir))
+#         try:
+#             ''' validate property value '''
+#             if self._session is None and \
+#                 self.homeDir is not None and \
+#                 self.appName is not None and \
+#                 self.config is not None and \
+#                 self.jarDir is not None and \
+#                 self.master is not None:
+#                 findspark.init(self.homeDir)
+#                 from pyspark.sql import SparkSession
+#                 logger.debug("%s importing %s library from spark dir: %s"
+#                          % (__s_fn_id__,SparkSession.__name__, self.homeDir))
 
-                self._session = SparkSession \
-                                .builder \
-                                .master(self.master) \
-                                .appName(self.appName) \
-                                .config(self.config, self.jarDir) \
-                                .getOrCreate()
-                logger.warning("%s Nonetype spark session set with default homeDir: %s appName: %s "+\
-                             "conf: %s jarDir: %s master: %s",
-                             __s_fn_id__, self.homeDir.upper(), self.appName.upper(), 
-                             self.config.upper(), self.jarDir.upper(), self.master.upper())
+#                 self._session = SparkSession \
+#                                 .builder \
+#                                 .master(self.master) \
+#                                 .appName(self.appName) \
+#                                 .config(self.config, self.jarDir) \
+#                                 .getOrCreate()
+#                 logger.warning("%s Nonetype spark session set with default homeDir: %s appName: %s "+\
+#                              "conf: %s jarDir: %s master: %s",
+#                              __s_fn_id__, self.homeDir.upper(), self.appName.upper(), 
+#                              self.config.upper(), self.jarDir.upper(), self.master.upper())
                 
-#             logger.info("Starting a Spark Session: %s",self._session)
+# #             logger.info("Starting a Spark Session: %s",self._session)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug("%s",traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug("%s",traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._session
+#         return self._session
 
-    @session.setter
-    def session(self,session_args:dict={}):
+#     @session.setter
+#     def session(self,session_args:dict={}):
 
-        __s_fn_id__ = f"{self.__name__} function <@session.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@session.setter>"
 
-        try:
-            ''' set the spark home directory '''
-            if "HOMEDIR" in session_args.keys():
-                self.homeDir = session_args['HOMEDIR']
-            findspark.init(self.homeDir)
-            from pyspark.sql import SparkSession
-            logger.debug("Importing %s library from spark dir: %s"
-                         % (SparkSession.__name__, self.homeDir))
-            if "CONFIG" in session_args.keys():
-                self.config = session_args['CONFIG']
-            ''' set master cluster setup local[x], yarn or mesos '''
-            if "MASTER" in session_args.keys():
-                self.master = session_args['MASTER']    
-            if "APPNAME" in session_args.keys():
-                self.appName = session_args['APPNAME']  
-            ''' set the db_type specific jar '''
-            if "JARDIR" in session_args.keys():
-                self.jarDir = session_args['JARDIR']
+#         try:
+#             ''' set the spark home directory '''
+#             if "HOMEDIR" in session_args.keys():
+#                 self.homeDir = session_args['HOMEDIR']
+#             findspark.init(self.homeDir)
+#             from pyspark.sql import SparkSession
+#             logger.debug("Importing %s library from spark dir: %s"
+#                          % (SparkSession.__name__, self.homeDir))
+#             if "CONFIG" in session_args.keys():
+#                 self.config = session_args['CONFIG']
+#             ''' set master cluster setup local[x], yarn or mesos '''
+#             if "MASTER" in session_args.keys():
+#                 self.master = session_args['MASTER']    
+#             if "APPNAME" in session_args.keys():
+#                 self.appName = session_args['APPNAME']  
+#             ''' set the db_type specific jar '''
+#             if "JARDIR" in session_args.keys():
+#                 self.jarDir = session_args['JARDIR']
 
-            if self._session:
-                self._session.stop
-            self._session = SparkSession \
-                                .builder \
-                                .master(self.master) \
-                                .appName(self.appName) \
-                                .config(self.config, self.jarDir) \
-                                .getOrCreate()
+#             if self._session:
+#                 self._session.stop
+#             self._session = SparkSession \
+#                                 .builder \
+#                                 .master(self.master) \
+#                                 .appName(self.appName) \
+#                                 .config(self.config, self.jarDir) \
+#                                 .getOrCreate()
                 
-            logger.info("%s Starting a Spark Session: %s for %s",
-                        __s_fn_id__ ,self._session, self.dbType)
+#             logger.info("%s Starting a Spark Session: %s for %s",
+#                         __s_fn_id__ ,self._session, self.dbType)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._session
+#         return self._session
 
 
-    ''' Function --- DATA SETTER & GETTER ---
+#     ''' Function --- DATA SETTER & GETTER ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @property
-    def data(self):
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @property
+#     def data(self):
 
-        __s_fn_id__ = f"{self.__name__} function <@property data>"
+#         __s_fn_id__ = f"{self.__name__} function <@property data>"
 
-        try:
-            ''' validate property value '''
-            if not isinstance(self._data,DataFrame):
-                self._data = self.session.createDataFrame(self._data)
-            if self._data.count() <= 0:
-                raise ValueError("No records found in data") 
+#         try:
+#             ''' validate property value '''
+#             if not isinstance(self._data,DataFrame):
+#                 self._data = self.session.createDataFrame(self._data)
+#             if self._data.count() <= 0:
+#                 raise ValueError("No records found in data") 
                 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._data
+#         return self._data
 
-    @data.setter
-    def data(self,data):
+#     @data.setter
+#     def data(self,data):
 
-        __s_fn_id__ = f"{self.__name__} function <@data.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@data.setter>"
 
-        try:
-            ''' validate property value '''
-            if data is None:
-                raise AttributeError("Dataset cannot be empty")
-            if not isinstance(data,DataFrame):
-                self._data = self.session.createDataFrame(data)
-                logger.debug("%s %s dtype convereted to %s with %d rows %d columns",
-                         __s_fn_id__,type(data),type(self._data),
-                         self._data.count(),len(self._data.columns))
-            else:
-                self._data = data
+#         try:
+#             ''' validate property value '''
+#             if data is None:
+#                 raise AttributeError("Dataset cannot be empty")
+#             if not isinstance(data,DataFrame):
+#                 self._data = self.session.createDataFrame(data)
+#                 logger.debug("%s %s dtype convereted to %s with %d rows %d columns",
+#                          __s_fn_id__,type(data),type(self._data),
+#                          self._data.count(),len(self._data.columns))
+#             else:
+#                 self._data = data
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._data
+#         return self._data
 
 
-    ''' Function
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    ''' --- PARTITIONS --- '''
-    @property
-    def partitions(self):
-        """
-        Description:
-            partition options @property and @setter functions
-        Attributes:
-        Returns: self._partitions (int)
-        """
+#     ''' Function
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     ''' --- PARTITIONS --- '''
+#     @property
+#     def partitions(self):
+#         """
+#         Description:
+#             partition options @property and @setter functions
+#         Attributes:
+#         Returns: self._partitions (int)
+#         """
 
-        __s_fn_id__ = f"{self.__name__} function <@property partitions>"
+#         __s_fn_id__ = f"{self.__name__} function <@property partitions>"
 
-        try:
-            ''' validate property value '''
-            if self._partitions is None and appConf.has_option('SPARK','PARTITIONS'):
-                self._partitions = int(appConf.get('SPARK','PARTITIONS'))
-            elif self._partitions is None and not appConf.has_option('SPARK','PARTITIONS'):
-                self._partitions = os.cpu_count()
-                logger.warning("%s improper class property partitions, from %s, set to deafault: %d",
-                             __s_fn_id__, self.__conf_fname__.upper(), self._partitions)
+#         try:
+#             ''' validate property value '''
+#             if self._partitions is None and appConf.has_option('SPARK','PARTITIONS'):
+#                 self._partitions = int(appConf.get('SPARK','PARTITIONS'))
+#             elif self._partitions is None and not appConf.has_option('SPARK','PARTITIONS'):
+#                 self._partitions = os.cpu_count()
+#                 logger.warning("%s improper class property partitions, from %s, set to deafault: %d",
+#                              __s_fn_id__, self.__conf_fname__.upper(), self._partitions)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._partitions
+#         return self._partitions
 
-    @partitions.setter
-    def partitions(self,num_partitions:int):
+#     @partitions.setter
+#     def partitions(self,num_partitions:int):
 
-        __s_fn_id__ = f"{self.__name__} function <@partitions.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@partitions.setter>"
 
-        try:
-            ''' validate property value '''
-            if num_partitions <= 0:
-#                 raise ConnectionError("Invalid  %d spark NUMBER of PARTIONS" % num_partitions)
-                self._partitions = os.cpu_count()
-                logger.warning("%s invalid class property input num_partitions, setting to default %d",
-                             __s_fn_id__, self._partitions)
-            else:
-                self._partitions = num_partitions
-                logger.debug("%s class property partitions set to: %d", __s_fn_id__, self._partitions)
+#         try:
+#             ''' validate property value '''
+#             if num_partitions <= 0:
+# #                 raise ConnectionError("Invalid  %d spark NUMBER of PARTIONS" % num_partitions)
+#                 self._partitions = os.cpu_count()
+#                 logger.warning("%s invalid class property input num_partitions, setting to default %d",
+#                              __s_fn_id__, self._partitions)
+#             else:
+#                 self._partitions = num_partitions
+#                 logger.debug("%s class property partitions set to: %d", __s_fn_id__, self._partitions)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._partitions
+#         return self._partitions
 
 
     ''' Function
@@ -1138,7 +1152,7 @@ class dataWorkLoads():
 
         try:
             
-            if self.dbType == 'postgresql':
+            if self.dbType.lower() == 'postgresql':
                 ''' set the partitions '''
                 if "PARTITIONS" in options.keys():
                     self.partitions = options['PARTITIONS']
@@ -1154,7 +1168,7 @@ class dataWorkLoads():
                     options['password'] = self.dbPswd
                 if "driver" not in options.keys():
                     options['driver'] = self.dbDriver
-
+                logger.debug("%s", str(options))
                 ''' use query else use partition column'''
                 if select is not None and "".join(select.split())!="":
                     options['query'] = select
@@ -1165,7 +1179,7 @@ class dataWorkLoads():
                 else:
                     raise AttributeError("Invalid set of input variables necesssary "+\
                                          "to determine the read operation")
-            elif self.dbType == 'bigquery':
+            elif self.dbType.lower() == 'bigquery':
                 ''' --- BIGQUERY --- '''
                 if "table" in options.keys() and "".join(options['table'].split())!="":
                     options['table']=options['table']
