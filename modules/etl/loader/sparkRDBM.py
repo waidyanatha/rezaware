@@ -28,7 +28,7 @@ try:
     from psycopg2 import connect, DatabaseError
     from psycopg2.extras import execute_values
 
-    from rezaware.modules.etl.loader import propAttr as attr
+    from rezaware.modules.etl.loader import __propAttr__ as attr
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))

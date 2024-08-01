@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "propAttr"
+__name__ = "__propAttr__"
 __package__= "loader"
 __module__ = "etl"
 __app__ = "rezaware"
@@ -17,6 +17,8 @@ try:
     import logging
     import traceback
     import functools
+    import re
+    ''' SPORK PACKAGES '''
     import findspark
     findspark.init()
     from pyspark.sql import functions as F
@@ -24,7 +26,7 @@ try:
     from pyspark.sql.types import *
     from pyspark.sql.window import Window
     from pymongo import MongoClient
-
+    ''' DATATIME PACKAGES '''
     from datetime import datetime, date, timedelta
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"

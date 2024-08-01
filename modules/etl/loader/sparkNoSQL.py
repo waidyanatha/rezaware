@@ -24,7 +24,7 @@ try:
     import pandas as pd
     from bson.objectid import ObjectId
 
-    from rezaware.modules.etl.loader import propAttr as attr
+    from rezaware.modules.etl.loader import __propAttr__ as attr
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -215,8 +215,9 @@ class dataWorkLoads(attr.properties):
         _docs_sdf = None
 
         try:
-            if db_name is not None and "".join(db_name.split())!="":
-                self.dbName = db_name
+#             if db_name is not None and "".join(db_name.split())!="":
+#                 self.dbName = db_name
+            self.dbName = db_name
             if "DBAUTHSOURCE" in kwargs.keys():
                 self.dbAuthSource = kwargs['DBAUTHSOURCE']
             elif self.dbAuthSource is None:
@@ -224,7 +225,7 @@ class dataWorkLoads(attr.properties):
             else:
                 pass
             ''' read collections list from DB '''
-            if len(db_coll)>0:
+            if isinstance(db_coll,list) and len(db_coll)>0:
                 self.collections={"COLLLIST":db_coll}
             elif isinstance(kwargs,dict):
                 self.collections=kwargs
