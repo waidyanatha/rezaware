@@ -1039,28 +1039,31 @@ class dataWorkLoads(attr.properties):
                 if "driver" not in options.keys():
                     options['driver'] = self.dbDriver
 
-                ''' decide on value to set with '''
-                _query = f"SELECT max({pk_attr}) as max_val FROM {self._dbSchema}.{tbl_name}"
-                options['query'] = _query
-                ''' get the value '''
-                pk_deq_sdf_ = self.session.read\
-                    .format(self.rwFormat)\
-                    .options(**options)\
-                    .load()
-                if not isinstance(pk_deq_sdf_,DataFrame) or pk_deq_sdf_.count()<1:
-                    raise RuntimeError("Failed reading %s table %s %s next value pk returned empty %s" 
-                                       % (f"{self._dbSchema}.{tbl_name}", self._dbType.upper(), 
-                                          self.dbName.upper(), type(pk_deq_sdf_)))
-                _new_val = pk_deq_sdf_.select('max_val').collect()[0][0]
-                if not isinstance(_new_val,int):
-                    _new_val=1
-                if not isinstance(set_val, int) or set_val <= _new_val:
-                    set_val = _new_val
-                    logger.warning("%s invalid %s primary key value; setting to default %d",
-                                   __s_fn_id__, pk_attr.upper(), set_val)
-
-                ''' set the value in sequence table '''
-                _query = f"SELECT setval('{self._dbSchema}.{tbl_name}_{pk_attr}_seq', {set_val}, true)"
+#                 ''' decide on value to set with '''
+#                 _query = f"SELECT max({pk_attr}) as max_val FROM {self._dbSchema}.{tbl_name}"
+#                 options['query'] = _query
+#                 ''' get the value '''
+#                 pk_deq_sdf_ = self.session.read\
+#                     .format(self.rwFormat)\
+#                     .options(**options)\
+#                     .load()
+#                 if not isinstance(pk_deq_sdf_,DataFrame) or pk_deq_sdf_.count()<1:
+#                     raise RuntimeError("Failed reading %s table %s %s next value pk returned empty %s" 
+#                                        % (f"{self._dbSchema}.{tbl_name}", self._dbType.upper(), 
+#                                           self.dbName.upper(), type(pk_deq_sdf_)))
+#                 _new_val = pk_deq_sdf_.select('max_val').collect()[0][0]
+#                 if not isinstance(_new_val,int):
+#                     _new_val=1
+#                 if not isinstance(set_val, int) or set_val <= _new_val:
+#                     set_val = _new_val
+#                     logger.warning("%s invalid %s primary key value; setting to default %d",
+#                                    __s_fn_id__, pk_attr.upper(), set_val)
+# #                 ''' set the value in sequence table '''
+# #                 _query = f"SELECT setval('{self._dbSchema}.{tbl_name}_{pk_attr}_seq', {set_val}, true)"
+                ''' another way to set_val of pk_attr of a table '''
+                _query = "SELECT pg_catalog.setval(pg_get_serial_sequence("
+                _query += f"'{self._dbSchema}.{tbl_name}','{pk_attr}'),"
+                _query += f"(SELECT MAX({pk_attr}) FROM {self._dbSchema}.{tbl_name})+1)"
                 options['query'] = _query
                 ''' get the value '''
                 pk_deq_sdf_ = self.session.read\
