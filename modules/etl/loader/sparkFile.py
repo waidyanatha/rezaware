@@ -28,6 +28,8 @@ try:
     import boto3   # handling AWS S3
     from botocore.client import ClientError
 
+    from rezaware.modules.etl.loader import __propAttr__ as attr
+
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
 
@@ -49,7 +51,7 @@ except Exception as e:
     Resources:
         https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
 '''
-class dataWorkLoads():
+class dataWorkLoads(attr.properties):
     ''' Function --- INIT ---
     
         author: <nuwan.waidyanatha@rezgateway.com>
@@ -78,6 +80,12 @@ class dataWorkLoads():
         self.__ini_fname__ = __ini_fname__
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
+
+        ''' instantiate property attributes '''
+        super().__init__(
+            desc=self.__desc__,
+            realm="FILES"
+        )
 
 #         self._dType = None
 #         self._dTypeList = [
@@ -110,23 +118,23 @@ class dataWorkLoads():
         ]
 
         ''' Initialize property var to hold the data '''
-        self._data = None
+#         self._data = None
         self._storeMode =store_mode
         self._storeRoot =store_root  # holds the data root path or bucket name
         self._folderPath=None  # property attr for the set/get folder path
         self._asType = None
 
         ''' Initialize spark session parameters '''
-        self._homeDir= None   # spark $SPARK_HOME dir path property required for sessions
-        self._binDir = None   # spark $SPARK_BIN dir path property required for sessions
-        self._config = None   # spark .conf option property
+#         self._homeDir= None   # spark $SPARK_HOME dir path property required for sessions
+#         self._binDir = None   # spark $SPARK_BIN dir path property required for sessions
+#         self._config = None   # spark .conf option property
         self._jarDir = jar_dir   # spark JAR files dir path property
-        self._appName= None   # spark appName property with a valid string
-        self._master = None   # spark local[*], meso, or yarn property 
+#         self._appName= None   # spark appName property with a valid string
+#         self._master = None   # spark local[*], meso, or yarn property 
         self._rwFormat=None   # spark read/write formats (jdbc, csv,json, text) property
-        self._session =None   # spark session is set based on the storeMode property
+#         self._session =None   # spark session is set based on the storeMode property
         self._context =None   # spark context is set to support Hadoop & authentication
-        self._saveMode=None   # spark write append/overwrite save mode property
+#         self._saveMode=None   # spark write append/overwrite save mode property
 
         ''' initiate to load app.cfg data '''
         global logger
@@ -189,61 +197,61 @@ class dataWorkLoads():
         return None
 
 
-    ''' Function -- DATA --
-            TODO: 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @property
-    def data(self):
-        """ @propert data function
+#     ''' Function -- DATA --
+#             TODO: 
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @property
+#     def data(self):
+#         """ @propert data function
 
-            supports a class decorator @property that is used for getting the
-            instance specific datafame. The data must be a pyspark dataframe
-            and if it is not one, the function will try to convert the to a 
-            pyspark dataframe.
+#             supports a class decorator @property that is used for getting the
+#             instance specific datafame. The data must be a pyspark dataframe
+#             and if it is not one, the function will try to convert the to a 
+#             pyspark dataframe.
 
-            return self._data (pyspark dataframe)
-        """
+#             return self._data (pyspark dataframe)
+#         """
 
-        __s_fn_id__ = f"{self.__name__} function <@property data>"
+#         __s_fn_id__ = f"{self.__name__} function <@property data>"
 
-        try:
-            if not isinstance(self._data,DataFrame):
-                self._data = self.session.createDataFrame(self._data)
-            if self._data.count() <= 0:
-                raise ValueError("No records found in data") 
+#         try:
+#             if not isinstance(self._data,DataFrame):
+#                 self._data = self.session.createDataFrame(self._data)
+#             if self._data.count() <= 0:
+#                 raise ValueError("No records found in data") 
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._data
+#         return self._data
 
-    @data.setter
-    def data(self,data):
-        """ @data.setter function
+#     @data.setter
+#     def data(self,data):
+#         """ @data.setter function
 
-            supports the class propert for setting the instance specific data. 
-            The data must not be None-Type and must be a pyspark dataframe.
+#             supports the class propert for setting the instance specific data. 
+#             The data must not be None-Type and must be a pyspark dataframe.
 
-            return self._data (pyspark dataframe)
-        """
+#             return self._data (pyspark dataframe)
+#         """
 
-        __s_fn_id__ = f"{self.__name__} function <@data.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@data.setter>"
 
-        try:
-            if data is None:
-                raise AttributeError("Dataset cannot be empty")
-            self._data = data
-            logger.debug("%s data property %s set",__s_fn_id__,type(self._data))
+#         try:
+#             if data is None:
+#                 raise AttributeError("Dataset cannot be empty")
+#             self._data = data
+#             logger.debug("%s data property %s set",__s_fn_id__,type(self._data))
                 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._data
+#         return self._data
 
     ''' Function - @property mode and @mode.setter
 
@@ -572,243 +580,243 @@ class dataWorkLoads():
         return self._asType
 
 
-    ''' Function --- SPARK SESSION PROPERTIES ---
-            name: session @property and @setter functions
-            parameters:
+#     ''' Function --- SPARK SESSION PROPERTIES ---
+#             name: session @property and @setter functions
+#             parameters:
 
-            procedure: 
-                @property - if None try __conf_file__; else throw exception
-                @setter - if None or Empty throw exception; else set it
-            return self._* (* is the property attribute name)
+#             procedure: 
+#                 @property - if None try __conf_file__; else throw exception
+#                 @setter - if None or Empty throw exception; else set it
+#             return self._* (* is the property attribute name)
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    ''' HOMEDIR '''
-    ''' TODO - check if evn var $SPARK_HOME and $JAVA_HOME is set '''
-    @property
-    def homeDir(self) -> str:
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     ''' HOMEDIR '''
+#     ''' TODO - check if evn var $SPARK_HOME and $JAVA_HOME is set '''
+#     @property
+#     def homeDir(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property homeDir>"
+#         __s_fn_id__ = f"{self.__name__} function <@property homeDir>"
 
-        try:
-            if self._homeDir is None and appConf.has_option('SPARK','HOMEDIR'):
-                self._homeDir = appConf.get('SPARK','HOMEDIR')
-                logger.debug("%s Spark homeDir set to: %s",__s_fn_id__,self._homeDir)
+#         try:
+#             if self._homeDir is None and appConf.has_option('SPARK','HOMEDIR'):
+#                 self._homeDir = appConf.get('SPARK','HOMEDIR')
+#                 logger.debug("%s Spark homeDir set to: %s",__s_fn_id__,self._homeDir)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._homeDir
+#         return self._homeDir
 
-    @homeDir.setter
-    def homeDir(self,home_dir:str='') -> str:
+#     @homeDir.setter
+#     def homeDir(self,home_dir:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@homeDir.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@homeDir.setter>"
 
-        try:
-            if home_dir is None or "".join(home_dir.strip()) == "":
-                raise ConnectionError("Invalid spark HOMEDIR %s" % home_dir)
+#         try:
+#             if home_dir is None or "".join(home_dir.strip()) == "":
+#                 raise ConnectionError("Invalid spark HOMEDIR %s" % home_dir)
 
-            self._homeDir = home_dir
-            logger.debug("%s Spark homeDir set to: %s",__s_fn_id__,self._homeDir)
+#             self._homeDir = home_dir
+#             logger.debug("%s Spark homeDir set to: %s",__s_fn_id__,self._homeDir)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._homeDir
+#         return self._homeDir
 
-    ''' BINDIR '''
-    @property
-    def binDir(self) -> str:
+#     ''' BINDIR '''
+#     @property
+#     def binDir(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property binDir>"
+#         __s_fn_id__ = f"{self.__name__} function <@property binDir>"
 
-        try:
-            if self._binDir is None and appConf.has_option('SPARK','BINDIR'):
-                self._binDir = appConf.get('SPARK','BINDIR')
-                logger.debug("%s Spark binDir set to: %s",__s_fn_id__,self._binDir)
+#         try:
+#             if self._binDir is None and appConf.has_option('SPARK','BINDIR'):
+#                 self._binDir = appConf.get('SPARK','BINDIR')
+#                 logger.debug("%s Spark binDir set to: %s",__s_fn_id__,self._binDir)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._binDir
+#         return self._binDir
 
-    @binDir.setter
-    def binDir(self,bin_dir:str='') -> str:
+#     @binDir.setter
+#     def binDir(self,bin_dir:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@binDir.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@binDir.setter>"
 
-        try:
-            if bin_dir is None or "".join(bin_dir.strip()) == "":
-                raise ConnectionError("Invalid spark BINDIR %s" % bin_dir)
+#         try:
+#             if bin_dir is None or "".join(bin_dir.strip()) == "":
+#                 raise ConnectionError("Invalid spark BINDIR %s" % bin_dir)
 
-            self._binDir = bin_dir
-            logger.debug("%s Spark binDir set to: %s",__s_fn_id__,self._binDir)
+#             self._binDir = bin_dir
+#             logger.debug("%s Spark binDir set to: %s",__s_fn_id__,self._binDir)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._binDir
+#         return self._binDir
 
-    ''' APPNAME '''
-    @property
-    def appName(self) -> str:
+#     ''' APPNAME '''
+#     @property
+#     def appName(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property appName>"
+#         __s_fn_id__ = f"{self.__name__} function <@property appName>"
 
-        try:
-            if self._appName is None or "".join(self._appName.split())=="":
-                self._appName = " ".join([self.__app__,
-                                          self.__module__,
-                                          self.__package__,
-                                          self.__name__])
-                logger.debug("%s Spark appName set to: %s",__s_fn_id__,self._appName)
+#         try:
+#             if self._appName is None or "".join(self._appName.split())=="":
+#                 self._appName = " ".join([self.__app__,
+#                                           self.__module__,
+#                                           self.__package__,
+#                                           self.__name__])
+#                 logger.debug("%s Spark appName set to: %s",__s_fn_id__,self._appName)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._appName
+#         return self._appName
 
-    @appName.setter
-    def appName(self,app_name:str='') -> str:
+#     @appName.setter
+#     def appName(self,app_name:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@appName.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@appName.setter>"
 
-        try:
-            if app_name is None or "".join(app_name.strip()) == "":
-                raise ConnectionError("Invalid spark APPNAME %s" % app_name)
+#         try:
+#             if app_name is None or "".join(app_name.strip()) == "":
+#                 raise ConnectionError("Invalid spark APPNAME %s" % app_name)
 
-            self._appName = app_name
-            logger.debug("%s Spark appName set to: %s",__s_fn_id__,self._appName)
+#             self._appName = app_name
+#             logger.debug("%s Spark appName set to: %s",__s_fn_id__,self._appName)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._appName
+#         return self._appName
 
-    ''' CONFIG '''
-    @property
-    def config(self) -> str:
+#     ''' CONFIG '''
+#     @property
+#     def config(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property config>"
+#         __s_fn_id__ = f"{self.__name__} function <@property config>"
 
-        try:
-            if self._config is None and appConf.has_option('SPARK','CONFIG'):
-                self._config = appConf.get('SPARK','CONFIG')
-                logger.debug("%s Spark config set to: %s",__s_fn_id__,self._config)
+#         try:
+#             if self._config is None and appConf.has_option('SPARK','CONFIG'):
+#                 self._config = appConf.get('SPARK','CONFIG')
+#                 logger.debug("%s Spark config set to: %s",__s_fn_id__,self._config)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._config
+#         return self._config
 
-    @config.setter
-    def config(self,config:str='') -> str:
+#     @config.setter
+#     def config(self,config:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@config.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@config.setter>"
 
-        try:
-            if config is None or "".join(config.strip()) == "":
-                raise ConnectionError("Invalid spark CONFIG %s" % config)
+#         try:
+#             if config is None or "".join(config.strip()) == "":
+#                 raise ConnectionError("Invalid spark CONFIG %s" % config)
 
-            self._config = config
-            logger.debug("%s Spark config set to: %s",__s_fn_id__,self._config)
+#             self._config = config
+#             logger.debug("%s Spark config set to: %s",__s_fn_id__,self._config)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._config
+#         return self._config
 
-    ''' JARDIR '''
-    @property
-    def jarDir(self) -> str:
+#     ''' JARDIR '''
+#     @property
+#     def jarDir(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property jarDir>"
+#         __s_fn_id__ = f"{self.__name__} function <@property jarDir>"
 
-        try:
-            if self._jarDir is None and appConf.has_option('SPARK','JARDIR'):
-                self._jarDir = appConf.get('SPARK','JARDIR')
-                logger.debug("%s @property Spark jarDir set to: %s",__s_fn_id__,self._jarDir)
+#         try:
+#             if self._jarDir is None and appConf.has_option('SPARK','JARDIR'):
+#                 self._jarDir = appConf.get('SPARK','JARDIR')
+#                 logger.debug("%s @property Spark jarDir set to: %s",__s_fn_id__,self._jarDir)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._jarDir
+#         return self._jarDir
 
-    @jarDir.setter
-    def jarDir(self,jar_dir:str='') -> str:
+#     @jarDir.setter
+#     def jarDir(self,jar_dir:str='') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@jarDir.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@jarDir.setter>"
 
-        try:
-            if jar_dir is None or "".join(jar_dir.strip()) == "":
-                raise ConnectionError("Invalid spark JARDIR %s" % jar_dir)
+#         try:
+#             if jar_dir is None or "".join(jar_dir.strip()) == "":
+#                 raise ConnectionError("Invalid spark JARDIR %s" % jar_dir)
 
-            self._jarDir = jar_dir
-            logger.debug("%s Spark jarDir set to: %s",__s_fn_id__,self._jarDir)
+#             self._jarDir = jar_dir
+#             logger.debug("%s Spark jarDir set to: %s",__s_fn_id__,self._jarDir)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._jarDir
+#         return self._jarDir
 
-    ''' MASTER '''
-    @property
-    def master(self) -> str:
+#     ''' MASTER '''
+#     @property
+#     def master(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property master>"
+#         __s_fn_id__ = f"{self.__name__} function <@property master>"
 
-        try:
-            if self._master is None and appConf.has_option('SPARK','MASTER'):
-                self._master = appConf.get('SPARK','MASTER')
-                logger.debug("@property Spark master set to: %s",self._master)
+#         try:
+#             if self._master is None and appConf.has_option('SPARK','MASTER'):
+#                 self._master = appConf.get('SPARK','MASTER')
+#                 logger.debug("@property Spark master set to: %s",self._master)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._master
+#         return self._master
 
-    @master.setter
-    def master(self,master:str='local[1]') -> str:
+#     @master.setter
+#     def master(self,master:str='local[1]') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@master.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@master.setter>"
 
-        try:
-            if master is None or "".join(master.strip()) == "":
-                self._master = "local[1]"
-                logger.warning("SparkSession master set to default %s",self._master)
+#         try:
+#             if master is None or "".join(master.strip()) == "":
+#                 self._master = "local[1]"
+#                 logger.warning("SparkSession master set to default %s",self._master)
 
-            self._master = master
-            logger.debug("@setter Spark master set to: %s",self._master)
+#             self._master = master
+#             logger.debug("@setter Spark master set to: %s",self._master)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._master
+#         return self._master
 
     ''' RWFORMAT '''
     @property
@@ -850,142 +858,142 @@ class dataWorkLoads():
         return self._rwFormat
 
 
-    ''' SAVEMODE '''
-    @property
-    def saveMode(self) -> str:
+#     ''' SAVEMODE '''
+#     @property
+#     def saveMode(self) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@property saveMode>"
+#         __s_fn_id__ = f"{self.__name__} function <@property saveMode>"
 
-        try:
-            if self._saveMode is None and appConf.has_option('SPARK','SAVEMODE'):
-                self._saveMode = appConf.get('SPARK','SAVEMODE')
-                logger.debug("@property Spark saveMode set to: %s",self._saveMode)
+#         try:
+#             if self._saveMode is None and appConf.has_option('SPARK','SAVEMODE'):
+#                 self._saveMode = appConf.get('SPARK','SAVEMODE')
+#                 logger.debug("@property Spark saveMode set to: %s",self._saveMode)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._saveMode
+#         return self._saveMode
 
-    @saveMode.setter
-    def saveMode(self,save_mode:str='Overwrite') -> str:
+#     @saveMode.setter
+#     def saveMode(self,save_mode:str='Overwrite') -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
+#         __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
 
-        try:
-            if save_mode not in ['Append','Overwrite']:
-                raise ConnectionError("Invalid spark SAVEMODE %s" % save_mode)
+#         try:
+#             if save_mode not in ['Append','Overwrite']:
+#                 raise ConnectionError("Invalid spark SAVEMODE %s" % save_mode)
 
-            self._saveMode = save_mode
-            logger.debug("@setter Spark saveMode set to: %s",self._saveMode)
+#             self._saveMode = save_mode
+#             logger.debug("@setter Spark saveMode set to: %s",self._saveMode)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._saveMode
+#         return self._saveMode
 
 
-    ''' Function --- SPARK SESSION ---
-            name: session @property and @setter functions
-            parameters:
+#     ''' Function --- SPARK SESSION ---
+#             name: session @property and @setter functions
+#             parameters:
 
-            procedure: 
-            return self._session
+#             procedure: 
+#             return self._session
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @property
-    def session(self):
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @property
+#     def session(self):
 
-        __s_fn_id__ = f"{self.__name__} function <@property session>"
+#         __s_fn_id__ = f"{self.__name__} function <@property session>"
 
-        try:
-            if self._session is None and \
-                not self.homeDir is None and \
-                not self.appName is None and \
-                not self.config is None and \
-                not self.jarDir is None and \
-                not self.master is None:
-                findspark.init(self.homeDir)
-                from pyspark.sql import SparkSession
-                logger.debug("%s importing %s library from spark dir: %s"
-                         % (__s_fn_id__,SparkSession.__name__, self.homeDir))
+#         try:
+#             if self._session is None and \
+#                 not self.homeDir is None and \
+#                 not self.appName is None and \
+#                 not self.config is None and \
+#                 not self.jarDir is None and \
+#                 not self.master is None:
+#                 findspark.init(self.homeDir)
+#                 from pyspark.sql import SparkSession
+#                 logger.debug("%s importing %s library from spark dir: %s"
+#                          % (__s_fn_id__,SparkSession.__name__, self.homeDir))
 
-                self._session = SparkSession \
-                                .builder \
-                                .master(self.master) \
-                                .appName(self.appName) \
-                                .config(self.config, self.jarDir) \
-                                .getOrCreate()
-                logger.debug("Non-type spark session set with homeDir: %s appName: %s "+\
-                             "conf: %s jarDir: %s master: %s"
-                             ,self.homeDir,self.appName,self.config,self.jarDir,self.master)
-#             logger.info("Starting a Spark Session: %s",self._session)
+#                 self._session = SparkSession \
+#                                 .builder \
+#                                 .master(self.master) \
+#                                 .appName(self.appName) \
+#                                 .config(self.config, self.jarDir) \
+#                                 .getOrCreate()
+#                 logger.debug("Non-type spark session set with homeDir: %s appName: %s "+\
+#                              "conf: %s jarDir: %s master: %s"
+#                              ,self.homeDir,self.appName,self.config,self.jarDir,self.master)
+# #             logger.info("Starting a Spark Session: %s",self._session)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug("%s",traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug("%s",traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._session
+#         return self._session
 
-    @session.setter
-    def session(self,session_args:dict={}):
+#     @session.setter
+#     def session(self,session_args:dict={}):
 
-        __s_fn_id__ = f"{self.__name__} function <@session.setter session>"
+#         __s_fn_id__ = f"{self.__name__} function <@session.setter session>"
 
-        try:
-            ''' 
-                set the spark home directory '''
-            if "HOMEDIR" in session_args.keys():
-                self.homeDir = session_args['HOMEDIR']
+#         try:
+#             ''' 
+#                 set the spark home directory '''
+#             if "HOMEDIR" in session_args.keys():
+#                 self.homeDir = session_args['HOMEDIR']
             
-            findspark.init(self.homeDir)
-            from pyspark.sql import SparkSession
-            logger.debug("Importing %s library from spark dir: %s"
-                         % (SparkSession.__name__, self.homeDir))
+#             findspark.init(self.homeDir)
+#             from pyspark.sql import SparkSession
+#             logger.debug("Importing %s library from spark dir: %s"
+#                          % (SparkSession.__name__, self.homeDir))
 
-            if "CONFIG" in session_args.keys():
-                self.config = session_args['CONFIG']
-            ''' set master cluster setup local[x], yarn or mesos '''
-            if "MASTER" in session_args.keys():
-                self.master = session_args['MASTER'] 
-            if "APPNAME" in session_args.keys():
-                self.appName = session_args['APPNAME']  
-            ''' set the db_type specific jar '''
-            if "JARDIR" in session_args.keys():
-                self.jarDir = session_args['JARDIR']
+#             if "CONFIG" in session_args.keys():
+#                 self.config = session_args['CONFIG']
+#             ''' set master cluster setup local[x], yarn or mesos '''
+#             if "MASTER" in session_args.keys():
+#                 self.master = session_args['MASTER'] 
+#             if "APPNAME" in session_args.keys():
+#                 self.appName = session_args['APPNAME']  
+#             ''' set the db_type specific jar '''
+#             if "JARDIR" in session_args.keys():
+#                 self.jarDir = session_args['JARDIR']
 
-#             if self.storeMode == 'local-fs':
-            ''' create session to read from local file system '''
-            if self._session:
-                self._session.stop
-            self._session = SparkSession \
-                                .builder \
-                                .master(self.master) \
-                                .appName(self.appName) \
-                                .config(self.config, self.jarDir) \
-                                .getOrCreate()
-#             elif self.storeMode == 'aws-s3-bucket':
-#                 pass
-#             elif self.storeMode == 'google-storage':
-#                 pass
-#             else:
-#                 raise RuntimeError("Unrecognized storeMode %s to start a spark session" 
-#                                    % self.storeMode)
+# #             if self.storeMode == 'local-fs':
+#             ''' create session to read from local file system '''
+#             if self._session:
+#                 self._session.stop
+#             self._session = SparkSession \
+#                                 .builder \
+#                                 .master(self.master) \
+#                                 .appName(self.appName) \
+#                                 .config(self.config, self.jarDir) \
+#                                 .getOrCreate()
+# #             elif self.storeMode == 'aws-s3-bucket':
+# #                 pass
+# #             elif self.storeMode == 'google-storage':
+# #                 pass
+# #             else:
+# #                 raise RuntimeError("Unrecognized storeMode %s to start a spark session" 
+# #                                    % self.storeMode)
 
-            logger.info("Starting a Spark Session: %s for %s"
-                        ,self._session, self.storeMode)
+#             logger.info("Starting a Spark Session: %s for %s"
+#                         ,self._session, self.storeMode)
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._session
+#         return self._session
 
 
     ''' Function --- SPARK CONTEXT ---

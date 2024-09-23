@@ -156,8 +156,20 @@ def main():
         parser.add_argument("--apps", type=str)   # comma separated list of apps
         parser.add_argument('--with_ini_files', action='store_true') # creates an app.ini all packages
         parser.add_argument('--run_conf_files', action='store_true') # exec app.cfg of all apps
+        parser.add_argument('--init_proj_toml', action='store_true') # copy default .toml to project
+        parser.add_argument('--h', action='store_true') # print instructions
         d = vars(parser.parse_args())
 
+        ''' help instructions '''
+        if "h" in d.keys() and d["h"]:
+            print("\nINSTRUCTIONS for 000_setup execution with parameters:")
+            print("\t--apps\tcomma separated list of apps to setup (e.g. --apps=wrangler, visuals")
+            print("\t\totherwise all apps (mining, visuals, & wrangler) will be setup")
+            print("\t--with_ini_files=True creates the __init__.py all module package folders")
+            print("\t--run_conf_files=True will configure environment with app.cfg parameters")
+            print("\t--init_proj_toml=True copies the 000_default .toml file into the project")
+            sys.exit(0)
+        
         ''' process if list of apps are given '''
         if "apps" in d.keys() and d["apps"] is not None and "".join(d["apps"].split())!="":
             _app_set = [s.strip() for s in d["apps"].split(",")]
@@ -210,7 +222,14 @@ def main():
                 logger.warning("%s app %s had errors %s",__s_fn_id__, _app.upper(),_app_err)
                 print("** [WARNING] skipping %s had errors %s"
                       % (_app.upper(),_app_err))
-            
+
+        ''' copy default files to project '''
+        if ("init_proj_toml" in d.keys() and d["init_proj_toml"])\
+            or not os.path.exists(os.path.join(parent_dir,"pyproject.toml")):
+            shutil.copy("000_defaults/pyproject.toml.template", "../pyproject.toml")
+            print("default project.toml created")
+        else:
+            pass
         print("Setup process is Done!")
         
     except Exception as err:
