@@ -156,7 +156,7 @@ def main():
         parser.add_argument("--apps", type=str)   # comma separated list of apps
         parser.add_argument('--with_ini_files', action='store_true') # creates an app.ini all packages
         parser.add_argument('--run_conf_files', action='store_true') # exec app.cfg of all apps
-        parser.add_argument('--init_proj_toml', action='store_true') # copy default .toml to project
+        parser.add_argument('--init_proj_env', action='store_true') # copy default .toml to project
         parser.add_argument('--h', action='store_true') # print instructions
         d = vars(parser.parse_args())
 
@@ -167,7 +167,7 @@ def main():
             print("\t\totherwise all apps (mining, visuals, & wrangler) will be setup")
             print("\t--with_ini_files=True creates the __init__.py all module package folders")
             print("\t--run_conf_files=True will configure environment with app.cfg parameters")
-            print("\t--init_proj_toml=True copies the 000_default .toml file into the project")
+            print("\t--init_proj_env=True copies the 000_default .toml & .env files into the project")
             sys.exit(0)
         
         ''' process if list of apps are given '''
@@ -224,12 +224,21 @@ def main():
                       % (_app.upper(),_app_err))
 
         ''' copy default files to project '''
-        if ("init_proj_toml" in d.keys() and d["init_proj_toml"])\
-            or not os.path.exists(os.path.join(parent_dir,"pyproject.toml")):
-            shutil.copy("000_defaults/pyproject.toml.template", "../pyproject.toml")
-            print("default project.toml created")
+        if ("init_proj_env" in d.keys() and d["init_proj_env"]):
+            if not os.path.exists(os.path.join(parent_dir,"pyproject.toml")):
+                shutil.copy("000_defaults/pyproject.toml.template", "../pyproject.toml")
+                print("default project.toml created")
+            if not os.path.exists(os.path.join(parent_dir,".env")):
+                shutil.copy("000_defaults/env.template", "../.env")
+                print("default .env created")
         else:
             pass
+#         if ("init_proj_env" in d.keys() and d["init_proj_env"])\
+#             or not os.path.exists(os.path.join(parent_dir,".env")):
+#             shutil.copy("000_defaults/env.template", "../.env")
+#             print("default .env created")
+#         else:
+#             pass
         print("Setup process is Done!")
         
     except Exception as err:
