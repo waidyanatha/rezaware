@@ -67,6 +67,12 @@ class dataWorkLoads(attr.properties):
                  **kwargs,
                 ):
 
+        ''' instantiate property attributes '''
+        super().__init__(
+#             desc=self.__desc__,
+            realm="NOSQLDB"
+        )
+
         self.__name__ = __name__
         self.__package__ = __package__
         self.__module__ = __module__
@@ -79,11 +85,13 @@ class dataWorkLoads(attr.properties):
         else:
             self.__desc__ = desc
 
-        ''' instantiate property attributes '''
-        super().__init__(
-            desc=self.__desc__,
-            realm="NOSQLDB"
-        )
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
+        
+#         ''' instantiate property attributes '''
+#         super().__init__(
+#             desc=self.__desc__,
+#             realm="NOSQLDB"
+#         )
         
         self._dbType = db_type
         self._dbName = db_name #None
@@ -95,8 +103,6 @@ class dataWorkLoads(attr.properties):
         global logger
         global pkgConf
         global appConf
-        
-        __s_fn_id__ = f"{self.__name__} function <__init__>"
         
         try:
             self.cwd=os.path.dirname(__file__)

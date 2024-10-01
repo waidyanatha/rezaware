@@ -626,8 +626,8 @@ class properties():
 #             if self._dbUser is None and appConf.get('NOSQLDB','DBUSER'):
 #                 self._dbUser = appConf.get('NOSQLDB','DBUSER')
             _env_str = "_".join([self.realm,"DBUSER"])
-            if self._dbUser is None and os.getenv(_env_str):
-                self._dbUser = os.getenv(_env_str)
+            if self._dbUser is None and os.environ.get(_env_str):
+                self._dbUser = os.environ.get(_env_str)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -665,8 +665,8 @@ class properties():
 #             if self._dbPswd is None and appConf.get('NOSQLDB','DBPSWD'):
 #                 self._dbPswd = appConf.get('NOSQLDB','DBPSWD')
             _env_str = "_".join([self.realm,"DBPSWD"])
-            if self._dbPswd is None and os.getenv(_env_str):
-                self._dbPswd = os.getenv(_env_str)
+            if self._dbPswd is None and os.environ.get(_env_str):
+                self._dbPswd = os.environ.get(_env_str)
                 logger.debug("%s dbUser property %s read from environment %s",
                              __s_fn_id__, self._dbPswd, os.getenv(_env_str))
 

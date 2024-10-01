@@ -73,6 +73,11 @@ class dataWorkLoads(attr.properties):
         Exceptions:
         """
 
+        ''' instantiate property attributes '''
+        super().__init__(
+#             desc=self.__desc__,
+            realm="FILES"
+        )
         self.__name__ = __name__
         self.__package__ = __package__
         self.__module__ = __module__
@@ -81,11 +86,11 @@ class dataWorkLoads(attr.properties):
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
-        ''' instantiate property attributes '''
-        super().__init__(
-            desc=self.__desc__,
-            realm="FILES"
-        )
+#         ''' instantiate property attributes '''
+#         super().__init__(
+#             desc=self.__desc__,
+#             realm="FILES"
+#         )
 
 #         self._dType = None
 #         self._dTypeList = [
