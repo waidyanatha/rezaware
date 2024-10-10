@@ -24,13 +24,6 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 1. Now clone and initialize rezaware platform as a [submodule](https://github.blog/2016-02-01-working-with-submodules/)
    * ```git submodule add -b main https://github.com/waidyanatha/rezaware.git rezaware```
    * ```git submodule init```; will copy the mapping from the .gitmodules file into the local _./.git/config_ file
-1. (Recommended) you may also consider [setting up an Anaconda environment](https://salishsea-meopar-docs.readthedocs.io/en/latest/work_env/python3_conda_environment.html) with __python-3.8.10__ to avoid any distutils issues.
-   * create a new environment using the _requirements.txt_ file that is in the _rezaware_ folder:
-      - ```conda create --name rezenv python=3.8.10 --file requirements.txt```
-   * Thereafter, check if all packages, listed in requirements.txt was installed
-      - ```conda list``` will print a list to stdout
-   * Activate your conda environment;
-      - e.g. ```conda activate rezenv```
 1. Navigate into the rezaware folder and run setup to initialize the project with AI/ML functional app classes
    * ```cd rezaware```
    * In the next command run the setup for rezaware separately and the apps separately
@@ -45,6 +38,13 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 1. Add the submodule and initialize
    * ```git add .gitmodules rezaware/```
    * ```git init```
+1. Install dependencies with python _poetry_. 
+   * The _pyproject.tom_ file would be created from the previous 000_setup.py step
+   * ```poetry --version``` will confirm if _poetry_ dependency manager is installed
+   * If required, follow the [poetry installation docs](https://python-poetry.org/docs/)
+   * Activate the lock file with ```poetry lock```
+   * Install dependencies with ```poetry install```
+   * confirm installation and environment with ```poetry shell```; create a default shell with _(rezaware-py3.10)_
 1. (Optional) Include a _README.md_ file, if not already
    * ```echo "# Welcome to MyNewProj" >> README.md```
 1. Add and commit all newly created files and folders in _MyNewProj_
@@ -93,4 +93,11 @@ When you add a new module package into the _mining_, _wrangler_, and _visuals_ a
    * _tests_ - pytest scripts for applying unit & functional tests for any of the packages
 
 
-
+## Deprecated
+1. (Recommended) you may also consider [setting up an Anaconda environment](https://salishsea-meopar-docs.readthedocs.io/en/latest/work_env/python3_conda_environment.html) with __python-3.8.10__ to avoid any distutils issues.
+   * create a new environment using the _requirements.txt_ file that is in the _rezaware_ folder:
+      - ```conda create --name rezenv python=3.8.10 --file requirements.txt```
+   * Thereafter, check if all packages, listed in requirements.txt was installed
+      - ```conda list``` will print a list to stdout
+   * Activate your conda environment;
+      - e.g. ```conda activate rezenv```
