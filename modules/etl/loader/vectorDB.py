@@ -48,21 +48,19 @@ except Exception as e:
 '''
     Class reads and writes data from and to Vector databases using apache pyspark sql functions
         Current working databases: 
-        * postgresql
+        * ChromaDB
 
     Contributors:
-        * nuwan.waidyanatha@rezgateway.com
-        * samana.thetha@gmail.com
-        * farmraider@protonmail.com
+        * nuwan@soulfish.lk
 
     Resources:
         * Notebooks
-            * Upsert function evaluation use utils/notebooks/etl/load/sparkDBwls.ipynb
+            * To test this package use notebook in wrangler/notebooks/etl/load/
         * Installation guide
-            * https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
+            * 
         * Acknowledgement
-            * Many thanks to Santhanu's medium article and code snipets for generating the
-                upsert_sdf_to_db function https://tinyurl.com/pyspark-batch-upsert
+            * Followed some of the work from https://www.linkedin.com/pulse/build-lightning-fast-rag-chatbot-powered-groqs-lpu-ollama-multani-ssloc
+            * Consider dockerizing Chroma with https://medium.com/@pierrelouislet/getting-started-with-chroma-db-a-beginners-tutorial-6efa32300902
 '''
 class dataWorkLoads(attr.properties):
 
@@ -70,9 +68,9 @@ class dataWorkLoads(attr.properties):
         self, 
         desc : str="spark vector workloads", # identifier for the instances
         db_type : str = "chromadb", # database type one of self._dbTypeList
-        db_root : str = None
+        db_root : str = None,   # folder path to all databases and collections
         # db_name : str = None,
-#         **kwargs:dict, # can contain hostIP and database connection settings
+        **kwargs, # unused at the moment 
     ):
         """
         Description:
@@ -167,13 +165,24 @@ class dataWorkLoads(attr.properties):
     '''
     def store_vectors(
         self,
-        documents:list=None,
-        db_name:str=None,
-        collection:str=None,
-        embedding_fn:any=None,
+        documents:list=None, # list of document chunks
+        db_name:str=None,    # optional folder to append to the root
+        collection:str=None,   # the documents collection name
+        embedding_fn:any=None, # embediing function to use
         **kwargs,
     )->Any:
         """
+        Description:
+            Stores the vector embedding of the documents in the given database and collection
+        Attributes :
+            documents (list) list of document chunks
+            db_name (str) optional folder to append to the root
+            collection (str) the documents collection name
+            embedding_fn (any) embediing function to use
+        Returns :
+            vectorstore (any) specific vectorDB object
+        Exceptions :
+            collection must be specified
         """
 
         __s_fn_id__ = f"{self.__name__} function <store_vectors>"
