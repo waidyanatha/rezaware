@@ -43,7 +43,7 @@ langchain-groq = "^0.1.9"
 litellm = "^1.44.22"
 networkx = "^2.8.6"
 nltk = "^3.8.1"
-notebook = "^6.4.12"
+notebook = "^7.0.0"
 numpy = "^1.23.2"
 oauthlib = "^3.2.2"
 opentelemetry-api = "^1.22.0"
@@ -69,6 +69,7 @@ torch = "^1.12.1"
 tqdm = "^4.64.1"
 transformers = "^4.22.2"
 wheel = "^0.38.4"
+xeus-python = "^0.15.12"
 
 [build-system]
 requires = ["poetry-core"]
