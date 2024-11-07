@@ -109,7 +109,7 @@ class dataWorkLoads(attr.properties):
 #         )
 
         ''' default values '''
-        self._dbTypeList=['postgresql', 'bigquery']
+        # self._dbTypeList=['postgresql', 'bigquery']
         self._formatList=['jdbc','bigquery']
         ''' Initialize the DB parameters '''
         self._dbType = db_type

@@ -85,13 +85,17 @@ class properties():
             'DATABASE', # relational databases like postgres
             'NOSQLDB',  # NoSQL databases like mongodb
             'FILES', # csv, pdf, type text, audio, video files
+            'VECTORDB', # vector databases for embeddings
         ]
         self._dbTypesList = [
+            'postgresql', 
+            'bigquery',
             'mongodb',   # working and tested with community edition v4.4
             'cassandra', # TBD
             'hbase',   # TBD
             'neo4j',   # TBD
             'couchdb', # TBD
+            'chromadb',  # working with localhost
         ]
         self._asTypeList = [
             'STR',   # text string ""
