@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
+''' Initialize with default environment variables '''
+__name__ = "vectorDB"
+__package__ = "loader"
+__module__ = "etl"
+__app__ = "rezaware"
+__ini_fname__ = "app.ini"
+__conf_fname__ = "app.cfg"
+
+''' Load necessary and sufficient python librairies that are used throughout the class'''
+try:
+    import os
+    import sys
+    import configparser    
+    import logging
+    import functools
+    import traceback
+
+    import findspark
+    findspark.init()
+    from pyspark.sql import functions as F
+#     from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
+    from pyspark.sql import DataFrame
+    from typing import List, Iterable, Dict, Tuple, Any
+
+    ''' Chromadb '''
+    import chromadb
+
+    ''' langchain '''
+    from langchain_community.embeddings import OllamaEmbeddings
+    from langchain_community.vectorstores import Chroma
+    ''' fixing the problem with sqllite warning '''
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+    from rezaware.modules.etl.loader import __propAttr__ as attr
+
+    print("All functional %s-libraries in %s-package of %s-module imported successfully!"
+          % (__name__.upper(),__package__.upper(),__module__.upper()))
+
+except Exception as e:
+    print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
+          .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
+
+'''
+    Class reads and writes data from and to Vector databases using apache pyspark sql functions
+        Current working databases: 
+        * postgresql
+
+    Contributors:
+        * nuwan.waidyanatha@rezgateway.com
+        * samana.thetha@gmail.com
+        * farmraider@protonmail.com
+
+    Resources:
+        * Notebooks
+            * Upsert function evaluation use utils/notebooks/etl/load/sparkDBwls.ipynb
+        * Installation guide
+            * https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
+        * Acknowledgement
+            * Many thanks to Santhanu's medium article and code snipets for generating the
+                upsert_sdf_to_db function https://tinyurl.com/pyspark-batch-upsert
+'''
+class dataWorkLoads(attr.properties):
+
+    def __init__(
+        self, 
+        desc : str="spark vector workloads", # identifier for the instances
+        db_type : str = "chromadb", # database type one of self._dbTypeList
+        db_root : str = None
+        # db_name : str = None,
+#         **kwargs:dict, # can contain hostIP and database connection settings
+    ):
+        """
+        Description:
+            Initializes the dataWorkLoads: class property attributes, app configurations, 
+                logger function, data store directory paths, and global classes
+        Attributes:
+            desc (str) to change the instance description for identification
+        Returns:
+            None
+        """
+
+        ''' instantiate property attributes '''
+        super().__init__(
+#             desc=self.__desc__,
+            realm="VECTORDB"
+        )
+
+        self.__name__ = __name__
+        self.__package__ = __package__
+        self.__module__ = __module__
+        self.__app__ = __app__
+        self.__ini_fname__ = __ini_fname__
+        self.__conf_fname__ = __conf_fname__
+        self.__desc__ = desc
+
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
+
+        ''' Initialize the DB parameters '''
+        self._dbType=db_type
+        
+        ''' initiate to load app.cfg data '''
+        global logger
+        global pkgConf
+        global appConf
+
+        try:
+            self.cwd=os.path.dirname(__file__)
+            pkgConf = configparser.ConfigParser()
+            pkgConf.read(os.path.join(self.cwd,__ini_fname__))
+
+            self.projHome = pkgConf.get("CWDS","PROJECT")
+            sys.path.insert(1,self.projHome)
+
+            ''' innitialize the logger '''
+            from rezaware.utils import Logger as logs
+            logger = logs.get_logger(
+                cwd=self.projHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info("%s %s",self.__name__,self.__package__)
+
+            ''' Set the utils root directory '''
+            self.pckgDir = pkgConf.get("CWDS",self.__package__)
+            self.appDir = pkgConf.get("CWDS",self.__app__)
+            ''' get the path to the input and output data '''
+            self.dataDir = pkgConf.get("CWDS","DATA")
+
+            appConf = configparser.ConfigParser()
+            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
+
+            __def_db_dir__ = "vectors"
+            if db_root is None or "".join(db_root.split())=="":
+                self._dbRoot = os.path.join(
+                    pkgConf.get("CWDS","DATA"),__def_db_dir__)
+                logger.debug("%s setting %s at default path %s",
+                             __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
+            else:
+                self._dbRoot = db_root
+
+            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
+                         %(self.__app__,
+                           self.__module__,
+                           self.__package__,
+                           self.__name__,
+                           self.__desc__))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return None
+
+
+    ''' Function STORE VECTORS
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def store_vectors(
+        self,
+        documents:list=None,
+        db_name:str=None,
+        collection:str=None,
+        embedding_fn:any=None,
+        **kwargs,
+    )->Any:
+        """
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <store_vectors>"
+
+        __def_embedding_fn__=OllamaEmbeddings(model='nomic-embed-text')
+        # __def_db_dir__ = "vectors"
+
+        try:
+            ''' validate inputs and set to defaults '''
+            if not isinstance(documents,list) or len(documents)<=0:
+                raise AttributeError("Cannot store embeddings of %s documents" % type(documents))
+            # if not os.path.isdir(db_root):
+            #     db_root = os.path.join(
+            #         pkgConf.get("CWDS","DATA"),__def_db_dir__
+            #     )
+            #     logger.debug("%s setting %s at default path %s", 
+            #                  __s_fn_id__, self._dbType.upper(), 
+            #                  db_root.upper())
+            db_path=self._dbRoot
+            if isinstance(db_name,str) and "".join(db_name.split())!="":
+                db_path = os.path.join(self._dbRoot,db_name)
+                logger.debug("%s extending %s path with dbname %s",
+                             __s_fn_id__, self._dbType.upper(), 
+                             db_path.upper())
+            if embedding_fn is None:
+                embedding_fn = __def_embedding_fn__
+            if not isinstance(collection,str) or "".join(collection.split())=="":
+                raise AttributeError("Unspecified collection name %s; aborting!" 
+                                     % type(collection))
+            ''' store vector embeddings in vector database '''
+            if self.dbType.lower() == 'chromadb':
+                vectorstore = Chroma.from_documents(
+                    persist_directory = db_path,
+                    collection_name=collection,
+                    documents=documents,
+                    embedding=embedding_fn,
+                    )
+                if not isinstance(vectorstore,Chroma):
+                    raise ChildProcessError("Failed to store vector embeddings in %s for %s at %s" 
+                                            % (self._dbType.upper(), collection.upper(), 
+                                               db_path.upper()))
+            else:
+                raise AttributeError("Invalid %s dbType %s" % (self._realm, self._dbType.upper()))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+            return None
+
+        finally:
+            logger.debug("%s created vectorstore with %d documents in %s collection: %s at %s", 
+                             __s_fn_id__, vectorstore._collection.count(), 
+                         self._dbType.upper(), collection.upper(), db_path.upper())
+            return vectorstore
+
+    ''' Function GET COLLECTIONS
+
+            author: <nuwan@soulfish.lk>
+    '''
+    def get_collections(
+        self,
+        db_name:str=None,
+        **kwargs,
+    )->Any:
+        """
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <get_collections>"
+
+        __def_db_dir__ = "vectors"
+
+        try:
+            db_path=self._dbRoot
+            if isinstance(db_name,str) and "".join(db_name.split())!="":
+                db_path = os.path.join(self._dbRoot,db_name)
+                logger.debug("%s extending %s path with dbname %s",
+                             __s_fn_id__, self._dbType.upper(), 
+                             db_path.upper())
+            ''' read collection list from dbType '''
+            if self._dbType=="chromadb":
+                client = chromadb.PersistentClient(path=db_path)  # or HttpClient()
+                collections = client.list_collections()
+            else:
+                raise AttributeError("Invalid %s dbType %s" % (self._realm, self._dbType.upper()))
+
+            if not isinstance(collections,list) or len(collections)<=0:
+                raise AttributeError("No collections in %s at %s" 
+                                     % (self._dbType.upper(), db_path.upper()))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+            return None
+
+        finally:
+            logger.debug("%s read %d collections in %s at %s", 
+                             __s_fn_id__, len(collections), self._dbType.upper(), db_path.upper())
+            return collections
+
+    ''' Function READ VECTORS
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def read_vectors(
+        self,
+        db_name:str=None,
+        collection:str=None,
+        embedding_fn:any=None,
+        **kwargs,
+    )->Any:
+        """
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <read_vectors>"
+
+        __def_embedding_fn__=OllamaEmbeddings(model='nomic-embed-text')
+
+        try:
+            ''' validate inputs and set to defaults '''
+            db_path=self._dbRoot
+            if isinstance(db_name,str) and "".join(db_name.split())!="":
+                db_path = os.path.join(self._dbRoot,db_name)
+                logger.debug("%s extending %s path with dbname %s",
+                             __s_fn_id__, self._dbType.upper(), 
+                             db_path.upper())
+            if embedding_fn is None:
+                embedding_fn = __def_embedding_fn__
+            if not isinstance(collection,str) or "".join(collection.split())=="":
+                raise AttributeError("Unspecified collection name %s; aborting!" 
+                                     % type(collection))
+            ''' store vector embeddings in vector database '''
+            if self.dbType.lower() == 'chromadb':
+                vectorstore = Chroma(
+                    persist_directory = db_path,
+                    collection_name=collection,
+                    embedding_function=embedding_fn
+                    )
+                if not isinstance(vectorstore,Chroma):
+                    raise ChildProcessError("Failed to read %s vector embeddings collection %s at %s" 
+                                            % (self._dbType.upper(), collection.upper(), 
+                                               db_path.upper()))
+            else:
+                raise AttributeError("Invalid %s dbType %s" % (self._realm, self._dbType.upper()))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+            return None
+
+        finally:
+            logger.debug("%s loaded %s %s %s collection with %d documents at %s", 
+                             __s_fn_id__, self._dbType.upper(), self._realm, collection.upper(), 
+                         vectorstore._collection.count(), db_path.upper())
+            return vectorstore
