@@ -67,14 +67,11 @@ class dataWorkLoads(attr.properties):
         db_port : str = None,
         db_name : str = None,
         db_schema:str = None,
-#         db_user : str = None,
-#         db_pswd : str = None,
         spark_partitions:int=None,
         spark_format:str = None,
         spark_save_mode:str=None,
         spark_jar_dir: str =None,
-#         sparkPath:str=None, # directory path to spark insallation
-#         **kwargs:dict, # can contain hostIP and database connection settings
+        **kwargs, # unused
     ):
         """
         Description:
@@ -118,16 +115,6 @@ class dataWorkLoads(attr.properties):
         self._dbPort = db_port
         self._dbName = db_name
         self._dbSchema=db_schema
-#         self._dbUser = db_user
-#         self._dbPswd = db_pswd
-#         self._dbConnURL = None
-
-#         ''' Initialize spark session parameters '''
-#         self._homeDir = None
-#         self._binDir = None
-#         self._config = None
-#         self._appName = None
-#         self._master = None
         self._partitions=spark_partitions
         self._jarDir = spark_jar_dir
         self._rwFormat = spark_format
@@ -425,6 +412,8 @@ class dataWorkLoads(attr.properties):
                         or len(upsert_stats.collect())<=0:
                         raise RuntimeError("upsert failed, returned %s count object" 
                                            % type(upsert_stats))
+                    logger.debug("%s summing %d upsert stats", 
+                                 __s_fn_id__, len(upsert_stats.collect()))
                     total_recs_loaded = 0
                     for counter in upsert_stats.collect():
                         total_recs_loaded += counter
@@ -433,16 +422,21 @@ class dataWorkLoads(attr.properties):
                     ''' invalid DB type '''
                     raise RuntimeError("TBD %s dbType upsert; only works for postgresql", self.dbType)
 
-                logger.info("%s Success saving %d rows of %d records in table %s in %s db complete!",
-                            __s_fn_id__, total_recs_loaded, _data.count(),
-                            self._dbSchema+"."+db_table, self._dbName)
+                # logger.info("%s Success saving %d rows of %d records in table %s in %s db complete!",
+                #             __s_fn_id__, total_recs_loaded, _data.count(),
+                #             self._dbSchema.upper()+"."+db_table.upper(), self._dbName.upper())
 
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
                 logger.debug(traceback.format_exc())
                 print("[Error]"+__s_fn_id__, err)
+                return None
 
-            return total_recs_loaded
+            finally:
+                logger.info("%s Success saving %d rows of %d records in table %s in %s db complete!",
+                            __s_fn_id__, total_recs_loaded, _data.count(),
+                            self._dbSchema.upper()+"."+db_table.upper(), self._dbName.upper())
+                return total_recs_loaded
 
         return upsert_wrapper
 
