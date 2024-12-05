@@ -119,7 +119,8 @@ class dataWorkLoads(attr.properties):
         self._rwFormatTypes = [
             'csv',   # comma separated value
             'json',  # Javascript object notation
-            'text',  # text file
+            # 'text',  # text file
+            'txt',  # text file
         ]
 
         ''' Initialize property var to hold the data '''
@@ -1252,6 +1253,15 @@ class dataWorkLoads(attr.properties):
                     with open(file_path, 'r') as _dict_file:
                         self._data = json.load(_dict_file)
                         logger.info("Read %d rows of data into dictionary",len(self._data))
+
+                elif as_type_ in ['str']:
+                    ''' TOD MOVE TO @staticmethod and add S3 & GS '''
+                    try:
+                        with open(file_path, 'r') as _str_file:
+                            self._data = _str_file.read()
+                            logger.info("Read %d char length str",len(self._data))
+                    except FileNotFoundError as ferr:
+                        logger.error("%s File not found. %s",__s_fn_id__, ferr)
 
             except Exception as err:
                 logger.error("%s %s",__s_fn_id__, err)

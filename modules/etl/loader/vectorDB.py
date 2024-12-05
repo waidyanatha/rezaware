@@ -25,16 +25,19 @@ try:
     from pyspark.sql import DataFrame
     from typing import List, Iterable, Dict, Tuple, Any
 
-    ''' Chromadb '''
-    import chromadb
-
-    ''' langchain '''
-    from langchain_community.embeddings import OllamaEmbeddings
-    from langchain_community.vectorstores import Chroma
     ''' fixing the problem with sqllite warning '''
     __import__('pysqlite3')
-    import sys
-    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+    # import sys
+    # sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+    # import pysqlite3
+    sys.modules['sqlite3'] = sys.modules["pysqlite3"]
+    ''' langchain '''
+    from langchain_community.embeddings import OllamaEmbeddings
+    # from langchain_community.vectorstores import Chroma
+    from langchain_chroma import Chroma
+    ''' Chromadb '''
+    import chromadb
+    from chromadb.config import Settings
 
     from rezaware.modules.etl.loader import __propAttr__ as attr
 
@@ -59,8 +62,10 @@ except Exception as e:
         * Installation guide
             * 
         * Acknowledgement
-            * Followed some of the work from https://www.linkedin.com/pulse/build-lightning-fast-rag-chatbot-powered-groqs-lpu-ollama-multani-ssloc
-            * Consider dockerizing Chroma with https://medium.com/@pierrelouislet/getting-started-with-chroma-db-a-beginners-tutorial-6efa32300902
+            * Followed some of the work from 
+            https://www.linkedin.com/pulse/build-lightning-fast-rag-chatbot-powered-groqs-lpu-ollama-multani-ssloc
+            * Consider dockerizing Chroma with 
+            https://medium.com/@pierrelouislet/getting-started-with-chroma-db-a-beginners-tutorial-6efa32300902
 '''
 class dataWorkLoads(attr.properties):
 
@@ -69,6 +74,7 @@ class dataWorkLoads(attr.properties):
         desc : str="spark vector workloads", # identifier for the instances
         db_type : str = "chromadb", # database type one of self._dbTypeList
         db_root : str = None,   # folder path to all databases and collections
+        db_name : str = None,   # the child folder to use on root
         # db_name : str = None,
         **kwargs, # unused at the moment 
     ):
@@ -135,14 +141,22 @@ class dataWorkLoads(attr.properties):
             appConf = configparser.ConfigParser()
             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
-            __def_db_dir__ = "vectors"
+            # __def_db_dir__ = "vectors"
             if db_root is None or "".join(db_root.split())=="":
-                self._dbRoot = os.path.join(
-                    pkgConf.get("CWDS","DATA"),__def_db_dir__)
-                logger.debug("%s setting %s at default path %s",
+                # self._dbRoot = os.path.join(
+                #     pkgConf.get("CWDS","DATA"),__def_db_dir__)
+                self._dbRoot = pkgConf.get("CWDS","DATA")
+                logger.debug("%s setting %s default root path %s",
                              __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
             else:
                 self._dbRoot = db_root
+            __def_db_name__ = "vectors"
+            if not isinstance(db_name,str) or "".join(db_root.split())=="":
+                self._dbName = __def_db_name__
+                logger.debug("%s setting %s at default baabase name %s",
+                             __s_fn_id__, self._dbType.upper(), self._dbName.upper())
+            else:
+                self._dbName = db_name
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
@@ -201,12 +215,13 @@ class dataWorkLoads(attr.properties):
             #     logger.debug("%s setting %s at default path %s", 
             #                  __s_fn_id__, self._dbType.upper(), 
             #                  db_root.upper())
-            db_path=self._dbRoot
-            if isinstance(db_name,str) and "".join(db_name.split())!="":
-                db_path = os.path.join(self._dbRoot,db_name)
-                logger.debug("%s extending %s path with dbname %s",
-                             __s_fn_id__, self._dbType.upper(), 
-                             db_path.upper())
+            if isinstance(db_name,str) and "".join(db_name.split())=="":
+                self.dbName = db_name
+            # db_path=self._dbRoot
+            # if isinstance(db_name,str) and "".join(db_name.split())!="":
+            db_path = os.path.join(self._dbRoot,self.dbName)
+            logger.debug("%s extending %s root path %s with %s dbname.",
+                         __s_fn_id__, self._dbRoot, self._dbType.upper(), db_path.upper())
             if embedding_fn is None:
                 embedding_fn = __def_embedding_fn__
             if not isinstance(collection,str) or "".join(collection.split())=="":
@@ -214,11 +229,16 @@ class dataWorkLoads(attr.properties):
                                      % type(collection))
             ''' store vector embeddings in vector database '''
             if self.dbType.lower() == 'chromadb':
+                _client_settings = Settings(
+                    is_persistent=True,
+                    persist_directory=db_path,
+                )
                 vectorstore = Chroma.from_documents(
-                    persist_directory = db_path,
+                    # persist_directory = db_path,
                     collection_name=collection,
                     documents=documents,
                     embedding=embedding_fn,
+                    client_settings = _client_settings,
                     )
                 if not isinstance(vectorstore,Chroma):
                     raise ChildProcessError("Failed to store vector embeddings in %s for %s at %s" 
@@ -317,10 +337,15 @@ class dataWorkLoads(attr.properties):
                                      % type(collection))
             ''' store vector embeddings in vector database '''
             if self.dbType.lower() == 'chromadb':
+                _client_settings = Settings(
+                    is_persistent=True,
+                    persist_directory=db_path,
+                )
                 vectorstore = Chroma(
                     persist_directory = db_path,
                     collection_name=collection,
-                    embedding_function=embedding_fn
+                    embedding_function=embedding_fn,
+                    client_settings=_client_settings
                     )
                 if not isinstance(vectorstore,Chroma):
                     raise ChildProcessError("Failed to read %s vector embeddings collection %s at %s" 
@@ -340,3 +365,65 @@ class dataWorkLoads(attr.properties):
                              __s_fn_id__, self._dbType.upper(), self._realm, collection.upper(), 
                          vectorstore._collection.count(), db_path.upper())
             return vectorstore
+
+    ''' Function --- TEXT TO CHUNKS ---
+
+        authors: <nuwan@soulfish.lk>
+    '''
+    @staticmethod
+    def text_to_chunks(
+        text:list=None,
+        chunk_size:int=1000, 
+        overlap:int=200,
+        **kwargs
+    )->List:
+        """
+        Description:
+            Split the text to chunks
+        Attributes :
+            folder_path (str) directing to the folder
+        Returns :
+            documents (list)
+        Exceptions :
+            Incorrect folder path raizes exception
+            Folder with no PDFs raises an exception
+        """
+
+        __s_fn_id__ = f"{aiWorkLoads.__name__} function <text_to_chunks>"
+
+        try:
+            ''' validate inputs '''
+            if not isinstance(text,list) or len(text)<=0:
+                raise AttributeError("Invalid %s text" % type(text))
+            if not isinstance(chunk_size,int) and chunk_size<=0:
+                raise AttributeError("Invalid chunk_size %d must be > 0; typically 1000")
+            if not isinstance(overlap,int) and overlap<0:
+                raise AttributeError("Invalid overlap %d must be >= 0")
+            logger.debug("%s Splitting %d text documents into %d chunks with %d overlap", 
+                         __s_fn_id__, len(text), chunk_size, overlap)
+            ''' split the text '''
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size, 
+                chunk_overlap=overlap
+            )
+            chunks = text_splitter.split_documents(text)
+            if not isinstance(chunks,list) or len(chunks)<=0:
+                raise RuntimeError("Failed split %d text document" % len(text))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+            return None
+
+        finally:
+            logger.info("%s Split %d document into %d chunks", __s_fn_id__, len(text), len(chunks))
+            return chunks
+
+    # Function to load and process web content
+    def load_and_process_url(self,url):
+        loader = WebBaseLoader(url)
+        data = loader.load()
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        return text_splitter.split_documents(data)
+
