@@ -408,7 +408,7 @@ class Config(ConfigParser):
         conf_file:str,
     ) -> str:
 
-        __s_fn_id__ = f"{self.__name__} function <__init__>"
+        __s_fn_id__ = f"apply_conf_params"
 
         try:
             conf_data = Config.get_config(
@@ -429,7 +429,7 @@ class Config(ConfigParser):
             conf_file_path=None
 
         except Exception as e:
-            print("Error create_ini_files {0} with error:\n{1}".format(__package__,e))
+            print("{0} Error {1} with error:\n{2}".format(__s_fn_id__, __package__,e))
             print(traceback.format_exc())
 
         finally:
