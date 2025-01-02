@@ -17,6 +17,8 @@ try:
     import logging
     import functools
     import traceback
+    from dotenv import load_dotenv
+    load_dotenv()
 
     import findspark
     findspark.init()
@@ -27,6 +29,8 @@ try:
     from typing import List, Iterable, Dict, Tuple
     from psycopg2 import connect, DatabaseError
     from psycopg2.extras import execute_values
+
+    from google.cloud import bigquery
 
     from rezaware.modules.etl.loader import __propAttr__ as attr
 
@@ -239,27 +243,44 @@ class dataWorkLoads(attr.properties):
                 else:
                     raise AttributeError("Invalid set of input variables necesssary "+\
                                          "to determine the read operation")
+                load_sdf = self.session.read\
+                    .format(self.rwFormat)\
+                    .options(**options)\
+                    .load()
+
             elif self.dbType.lower() == 'bigquery':
                 ''' --- BIGQUERY --- '''
-                if "table" in options.keys() and "".join(options['table'].split())!="":
-                    options['table']=options['table']
-                elif db_table is not None and "".join(db_table.split())!="":
-                    if db_table.find(self.dbSchema+".") == -1:
-                        option['table'] = appConf.get('GOOGLE','PROJECTID')+\
-                                                ":"+self.dbSchema+"."+db_table
-                    else:
-                        option['table'] = appConf.get('GOOGLE','PROJECTID')+":"+db_table
-                else:
-                    raise AttributeError("%s improperly defined table option" 
-                                         % self._dbType.upper())
+                ''' check for credentials and project id'''
+                if not os.environ.get("GOOGLE_PROJECT_ID") or "".join(os.environ.get("GOOGLE_PROJECT_ID").split())==""\
+                    or not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or "".join(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS").split())=="":
+                    raise OSError("Both GOOGLE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS must be defined as ENV vars in .env")
+                # ''' check table string '''
+                # if "table" in options.keys() and "".join(options['table'].split())!="":
+                #     options['table']=options['table']
+                # elif db_table is not None and "".join(db_table.split())!="":
+                #     if db_table.find(self.dbSchema+".") == -1:
+                #         option['table'] = ".".join([os.environ.get('GOOGLE_PROJECT_ID'), self.dbSchema, db_table])
+                #     else:
+                #         option['table'] = ".".join([os.environ.get('GOOGLE_PROJECT_ID'), db_table])
+                # else:
+                #     raise AttributeError("%s improperly defined table option" 
+                #                          % self._dbType.upper())
+                ''' ensure select string is not null '''
+                if not select or "".join(select.split())=="":
+                    raise AttributeError("Undefined %s select string" % type(select))
+                ''' read data into pandas and then convert to spark dataframe '''
+                client = bigquery.Client(project=os.environ.get("GOOGLE_PROJECT_ID"))
+                load_sdf = self.session.createDataFrame(client.query(select).to_dataframe())
+
             else:
                 raise AttributeError("Something went wrong, unrecognized database type %s" 
                                       % self._dbType.upper())
 
-            load_sdf = self.session.read\
-                .format(self.rwFormat)\
-                .options(**options)\
-                .load()
+            ''' Temporary commented until bigquery read is resolved '''
+            # load_sdf = self.session.read\
+            #     .format(self.rwFormat)\
+            #     .options(**options)\
+            #     .load()
             
             if load_sdf:
                 logger.debug("%s loaded %d rows into pyspark dataframe", 
