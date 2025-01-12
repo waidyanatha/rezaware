@@ -30,7 +30,7 @@ try:
     from psycopg2 import connect, DatabaseError
     from psycopg2.extras import execute_values
 
-    from google.cloud import bigquery
+    # from google.cloud import bigquery
 
     from rezaware.modules.etl.loader import __propAttr__ as attr
 
@@ -90,7 +90,9 @@ class dataWorkLoads(attr.properties):
         ''' instantiate property attributes '''
         super().__init__(
 #             desc=self.__desc__,
-            realm="DATABASE"
+            realm="DATABASE",
+            db_type=db_type,
+            spark_format=spark_format,
         )
 
         self.__name__ = __name__
@@ -111,9 +113,9 @@ class dataWorkLoads(attr.properties):
 
         ''' default values '''
         # self._dbTypeList=['postgresql', 'bigquery']
-        self._formatList=['jdbc','bigquery']
+        # self._formatList=['jdbc','bigquery']
         ''' Initialize the DB parameters '''
-        self._dbType = db_type
+        self._dbType = db_type.lower()
         self._dbDriver=db_driver
         self._dbHostIP=db_hostIP
         self._dbPort = db_port
@@ -144,13 +146,13 @@ class dataWorkLoads(attr.properties):
             pkgConf = configparser.ConfigParser()
             pkgConf.read(os.path.join(self.cwd,__ini_fname__))
 
-            self.rezHome = pkgConf.get("CWDS","PROJECT")
-            sys.path.insert(1,self.rezHome)
+            self.projHome = pkgConf.get("CWDS","PROJECT")
+            sys.path.insert(1,self.projHome)
 
             ''' innitialize the logger '''
             from rezaware.utils import Logger as logs
             logger = logs.get_logger(
-                cwd=self.rezHome,
+                cwd=self.projHome,
                 app=self.__app__, 
                 module=self.__module__,
                 package=self.__package__,
@@ -211,8 +213,8 @@ class dataWorkLoads(attr.properties):
         Returns:
         """
 
-        load_sdf = None   # initiatlize return var
         __s_fn_id__ = f"{self.__name__} function <read_data_from_table>"
+        load_sdf = None   # initiatlize return var
         option = {}
 
         try:
@@ -252,25 +254,60 @@ class dataWorkLoads(attr.properties):
                 ''' --- BIGQUERY --- '''
                 ''' check for credentials and project id'''
                 if not os.environ.get("GOOGLE_PROJECT_ID") or "".join(os.environ.get("GOOGLE_PROJECT_ID").split())==""\
-                    or not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or "".join(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS").split())=="":
+                    or not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") \
+                    or "".join(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS").split())=="":
                     raise OSError("Both GOOGLE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS must be defined as ENV vars in .env")
-                # ''' check table string '''
-                # if "table" in options.keys() and "".join(options['table'].split())!="":
-                #     options['table']=options['table']
-                # elif db_table is not None and "".join(db_table.split())!="":
-                #     if db_table.find(self.dbSchema+".") == -1:
-                #         option['table'] = ".".join([os.environ.get('GOOGLE_PROJECT_ID'), self.dbSchema, db_table])
-                #     else:
-                #         option['table'] = ".".join([os.environ.get('GOOGLE_PROJECT_ID'), db_table])
-                # else:
-                #     raise AttributeError("%s improperly defined table option" 
-                #                          % self._dbType.upper())
+                if "project" not in options.keys():
+                    options['project'] = os.environ.get("GOOGLE_PROJECT_ID")
                 ''' ensure select string is not null '''
-                if not select or "".join(select.split())=="":
-                    raise AttributeError("Undefined %s select string" % type(select))
+                if select is not None and "".join(select.split())!="":
+                    options['query'] = select
+                    # load_sdf = self.session.read\
+                    #     .format(self.rwFormat)\
+                    #     .load(select)
+                elif db_table is not None and "".join(db_table.split())!="":
+                    if db_table.find(self.dbSchema+".") == -1:
+                        db_table = self.dbSchema+"."+db_table
+                    if db_table.find(options['project']+":") == -1:
+                        db_table = options['project']+":"+db_table
+                    options["table"]=db_table
+                    # ''' read data into pandas and then convert to spark dataframe '''
+                    # load_sdf = self.session.read\
+                    #     .format(self.rwFormat)\
+                    #     .options(**options)\
+                    #     .load()
+                else:
+                    raise AttributeError("Invalid set of input variables necesssary "+\
+                                         "to determine the read operation")
                 ''' read data into pandas and then convert to spark dataframe '''
-                client = bigquery.Client(project=os.environ.get("GOOGLE_PROJECT_ID"))
-                load_sdf = self.session.createDataFrame(client.query(select).to_dataframe())
+                load_sdf = self.session.read\
+                    .format(self.rwFormat)\
+                    .options(**options)\
+                    .load()
+
+            # elif self.dbType.lower() == 'bigquery_old':
+            #     ''' --- BIGQUERY --- '''
+            #     ''' check for credentials and project id'''
+            #     if not os.environ.get("GOOGLE_PROJECT_ID") or "".join(os.environ.get("GOOGLE_PROJECT_ID").split())==""\
+            #         or not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or "".join(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS").split())=="":
+            #         raise OSError("Both GOOGLE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS must be defined as ENV vars in .env")
+            #     # ''' check table string '''
+            #     # if "table" in options.keys() and "".join(options['table'].split())!="":
+            #     #     options['table']=options['table']
+            #     # elif db_table is not None and "".join(db_table.split())!="":
+            #     #     if db_table.find(self.dbSchema+".") == -1:
+            #     #         option['table'] = ".".join([os.environ.get('GOOGLE_PROJECT_ID'), self.dbSchema, db_table])
+            #     #     else:
+            #     #         option['table'] = ".".join([os.environ.get('GOOGLE_PROJECT_ID'), db_table])
+            #     # else:
+            #     #     raise AttributeError("%s improperly defined table option" 
+            #     #                          % self._dbType.upper())
+            #     ''' ensure select string is not null '''
+            #     if not select or "".join(select.split())=="":
+            #         raise AttributeError("Undefined %s select string" % type(select))
+            #     ''' read data into pandas and then convert to spark dataframe '''
+            #     client = bigquery.Client(project=os.environ.get("GOOGLE_PROJECT_ID"))
+            #     load_sdf = self.session.createDataFrame(client.query(select).to_dataframe())
 
             else:
                 raise AttributeError("Something went wrong, unrecognized database type %s" 

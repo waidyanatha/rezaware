@@ -18,6 +18,8 @@ try:
     import traceback
     import functools
     import re
+    from dotenv import load_dotenv
+    load_dotenv()
     ''' SPORK PACKAGES '''
     import findspark
     findspark.init()
@@ -55,6 +57,8 @@ class properties():
     def __init__(
         self,
         realm:str=None,
+        db_type:str=None,
+        spark_format:str=None,
         desc :str=None,
         **kwargs):
         """
@@ -107,6 +111,7 @@ class properties():
             'SPARK',  # spark dataframe
         ]   # list of data types to convert content to
         ''' --- Common DB properties --- '''
+        self._dbType = db_type
         self._dbHostIP=None
         self._dbPort = None
         self._dbUser = None
@@ -124,7 +129,11 @@ class properties():
         self._config = None
         self._appName = None
 #         self._jarDir = spark_jar_dir
-#         self._rwFormat = spark_format
+        self._rwFormatList = [
+            'jdbc',   # postgresql
+            'bigquery', # google cloud bigquery
+        ]
+        self._rwFormat = spark_format
 #         self._saveMode = spark_save_mode
         self._session = None
 
@@ -1406,8 +1415,9 @@ class properties():
 
         try:
             ''' validate property value '''
-            if self._rwFormat is None \
-                or self._rwFormat.lower() not in self._formatList \
+            # if self._rwFormat is None \
+            #     or self._rwFormat.lower() not in self._rwFormatList \
+            if self._rwFormat.lower() not in self._rwFormatList \
                 and appConf.has_option('SPARK','FORMAT'):
                 self._rwFormat = appConf.get('SPARK','FORMAT')
                 logger.warning("%s improper class property rwFormat, from %s, set to default: %s",
@@ -1427,9 +1437,9 @@ class properties():
 
         try:
             ''' validate property value '''
-            if rw_format.lower() not in self._formatList:
+            if rw_format.lower() not in self._rwFormatList:
                 raise ConnectionError("Invalid calss propert rwFormat %s, must be one of %s" 
-                                      % (rw_format.upper(),str(self._formatList)))
+                                      % (rw_format.upper(),str(self._rwFormatList)))
 
             self._rwFormat = rw_format
             logger.debug("%s class property rwFormat set to: %s", __s_fn_id__, self._rwFormat.upper())
@@ -1505,12 +1515,36 @@ class properties():
                 logger.debug("%s importing %s library from spark dir: %s"
                          % (__s_fn_id__,SparkSession.__name__, self.homeDir))
 
-                self._session = SparkSession \
-                                .builder \
-                                .master(self.master) \
-                                .appName(self.appName) \
-                                .config(self.config, self.jarDir) \
+                if self.realm.upper()=='DATABASE' and self.dbType.lower()=='postgresql':
+                    self._session = SparkSession \
+                                    .builder \
+                                    .master(self.master) \
+                                    .appName(self.appName) \
+                                    .config(self.config, self.jarDir) \
+                                    .getOrCreate()
+                elif self.realm.upper()=='DATABASE' and self.dbType.lower()=='bigquery':
+                    _bq_jar = "/opt/spark_hadoop_3/jars/spark-bigquery-with-dependencies_2.12-0.33.0.jar"
+                    _gcs_jar= "/opt/spark_hadoop_3/jars/gcs-connector-hadoop3-latest.jar"
+                    self._session = SparkSession \
+                                    .builder \
+                                    .appName(self.appName) \
+                                    .config(self.config, f"{os.path.expanduser(_bq_jar)}," + \
+                                        f"{os.path.expanduser(_gcs_jar)}") \
+                                    .config("spark.hadoop.google.cloud.auth.service.account.enable", "true") \
+                                    .config("spark.hadoop.google.cloud.auth.service.account.json.keyfile", 
+                                            os.environ["GOOGLE_APPLICATION_CREDENTIALS"]) \
+                                    .config("viewsEnabled","true") \
+                                    .config("materializationDataset",self.dbSchema) \
                                 .getOrCreate()
+
+                else:
+                    self._session = SparkSession \
+                                    .builder \
+                                    .master(self.master) \
+                                    .appName(self.appName) \
+                                    .config(self.config, self.jarDir) \
+                                    .getOrCreate()
+
                 logger.warning("%s Nonetype spark session set with default homeDir: %s appName: %s "+\
                              "conf: %s jarDir: %s master: %s",
                              __s_fn_id__, self.homeDir.upper(), self.appName.upper(), 
@@ -1551,7 +1585,31 @@ class properties():
 
             if self._session:
                 self._session.stop
-            self._session = SparkSession \
+            
+            if self.realm.upper()=='DATABASE' and self.dbType.lower()=='postgresql':
+                self._session = SparkSession \
+                                    .builder \
+                                    .master(self.master) \
+                                    .appName(self.appName) \
+                                    .config(self.config, self.jarDir) \
+                                    .getOrCreate()
+            elif self.realm.upper()=='DATABASE' and self.dbType.lower()=='bigquery':
+                _bq_jar = "/opt/spark_hadoop_3/jars/spark-bigquery-with-dependencies_2.12-0.33.0.jar"
+                _gcs_jar= "/opt/spark_hadoop_3/jars/gcs-connector-hadoop3-latest.jar"
+                self._session = SparkSession \
+                                .builder \
+                                .appName(self.appName) \
+                                .config(self.config, f"{os.path.expanduser(_bq_jar)}," + \
+                                    f"{os.path.expanduser(_gcs_jar)}") \
+                                .config("spark.hadoop.google.cloud.auth.service.account.enable", "true") \
+                                .config("spark.hadoop.google.cloud.auth.service.account.json.keyfile", 
+                                        os.environ["GOOGLE_APPLICATION_CREDENTIALS"]) \
+                                .config("viewsEnabled","true") \
+                                .config("materializationDataset",self.dbSchema) \
+                                .getOrCreate()
+
+            else:
+                self._session = SparkSession \
                                 .builder \
                                 .master(self.master) \
                                 .appName(self.appName) \
