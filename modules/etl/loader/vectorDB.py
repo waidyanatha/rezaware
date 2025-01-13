@@ -146,18 +146,21 @@ class dataWorkLoads(attr.properties):
                 # self._dbRoot = os.path.join(
                 #     pkgConf.get("CWDS","DATA"),__def_db_dir__)
                 self._dbRoot = pkgConf.get("CWDS","DATA")
-                logger.debug("%s setting %s default root path %s",
-                             __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
+                # logger.debug("%s setting %s default root path %s",
+                #              __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
             else:
                 self._dbRoot = db_root
+            logger.debug("%s setting %s root path %s",
+                         __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
             __def_db_name__ = "vectors"
             if not isinstance(db_name,str) or "".join(db_root.split())=="":
                 self._dbName = __def_db_name__
-                logger.debug("%s setting %s at default baabase name %s",
-                             __s_fn_id__, self._dbType.upper(), self._dbName.upper())
+                # logger.debug("%s setting %s at default baabase name %s",
+                #              __s_fn_id__, self._dbType.upper(), self._dbName.upper())
             else:
                 self._dbName = db_name
-
+            logger.debug("%s setting %s database name %s",
+                         __s_fn_id__, self._dbType.upper(), self._dbName.upper())
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
                            self.__module__,
@@ -283,21 +286,26 @@ class dataWorkLoads(attr.properties):
                              __s_fn_id__, self._dbType.upper(), 
                              db_path.upper())
             ''' read collection list from dbType '''
+            collections = []
             if self._dbType=="chromadb":
-                client = chromadb.PersistentClient(path=db_path)  # or HttpClient()
-                collections = client.list_collections()
+                try:
+                    client = chromadb.PersistentClient(path=db_path)  # or HttpClient()
+                    collections = client.list_collections()
+                except Exception as coll_err:
+                    logger.info("%s unable to %s retrieve collections from database %s\n%s", 
+                                __s_fn_id__, self._dbType.upper(), db_path.upper(), coll_err)
             else:
                 raise AttributeError("Invalid %s dbType %s" % (self._realm, self._dbType.upper()))
 
-            if not isinstance(collections,list) or len(collections)<=0:
-                raise AttributeError("No collections in %s at %s" 
-                                     % (self._dbType.upper(), db_path.upper()))
+            # if not isinstance(collections,list) or len(collections)<=0:
+            #     raise RuntimeError("Failed to retrieve collections in %s at %s" 
+            #                          % (self._dbType.upper(), db_path.upper()))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            return None
+            return [] # empty list
 
         finally:
             logger.debug("%s read %d collections in %s at %s", 
