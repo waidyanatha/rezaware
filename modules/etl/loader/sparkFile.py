@@ -3,8 +3,8 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "sparkFile"
-__module__ = "etl"
 __package__ = "loader"
+__module__ = "etl"
 __app__ = "rezaware"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
