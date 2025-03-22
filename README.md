@@ -27,7 +27,7 @@ __NOTE__: instructions and content is specific to Debian distros and was tested 
 1. Navigate into the rezaware folder and run setup to initialize the project with AI/ML functional app classes
    * ```cd rezaware```
    * In the next command run the setup for rezaware separately and the apps separately
-      - ```python3 -m 000_setup --app=rezaware --with_ini_files```; it is important to use the _--with_ini_files_ directive_ flag because it instructs _000_setup.py_ to build the _rezaware_ app and python __init.py__ and __app.ini__ files necessary for the seamless package integration 
+      - First run ```python3 -m 000_setup --app=rezaware --with_ini_files --init_proj_env```; it is important to use the _--with_ini_files_ and _--init_proj_env directive flag because it instructs _000_setup.py_ to build the _rezaware_ app and python __init.py__ and __app.ini__ files necessary for the seamless package integration; also setup the default poetry pyproject.toml and _.env_ files 
       - ```python3 -m 000_setup```; at the onset you would not have any _wrangler_, _mining_, and visuals code in the respective _modules_ folders; hence, you cannot build the python __init.py__ and __app.ini__ files. Without  the _--with_ini_files_ directive the process will simply generate the app folder structure and default _app.cfg_ file. 
    * You have now created your _MyNewProj_ with the _rezaware_ platform framework and can begin to start coding.
    * __Note__ you need to configure the _app.cfg_ in the _mining_,_wrangler_,and _visuals_ apps
