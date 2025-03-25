@@ -34,7 +34,7 @@ try:
     ''' langchain '''
     from langchain_community.embeddings import OllamaEmbeddings
     # from langchain_community.vectorstores import Chroma
-    from langchain_chroma import Chroma
+    # from langchain_chroma import Chroma
     ''' Chromadb '''
     import chromadb
     from chromadb.config import Settings
@@ -45,7 +45,7 @@ try:
           % (__name__.upper(),__package__.upper(),__module__.upper()))
 
 except Exception as e:
-    print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
+    print("Some packages in {0} module {1} package for {2} class didn't load\n{3}"\
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
