@@ -87,9 +87,9 @@ class llmWorkLoads():
             'GROQ',   # groc llms
             'OLLAMA', # ollama local llm
         ]
-        self._llmName = llm_name
-        self._llmList = [
-            "llama2-70b-chat",
+        self._starCoder = llm_name
+        self._starCoderList = [
+            "llama-3.3-70b-versatile",
             "gemma:2b"
         ]
         self._temperature=temperature
@@ -171,11 +171,11 @@ class llmWorkLoads():
 
         try:
             ''' validate provider value '''
-            if provider not in self._provList:
+            if provider.lower() not in self._provList:
                 raise AttributeError("Invalid class property provider, must be %s" 
                                      % ", ".join(self._provList))
 
-            self._provider = provider
+            self._provider = provider.lower()
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -184,44 +184,44 @@ class llmWorkLoads():
 
         return self._provider
 
-    ''' --- LLM_NAME --- '''
+    ''' --- STARCODER --- '''
     @property
-    def llmName(self):
+    def starCoder(self):
 
-        __s_fn_id__ = f"{self.__name__} function <@property llmName>"
+        __s_fn_id__ = f"{self.__name__} function <@property starCoder>"
 
         try:
             ''' validate llm name value '''
-            if self._llmName.lower() not in self._llmList:
-                raise AttributeError("Invalid class property llmName, %s must be one of %s" 
-                                     % (type(self._llmName), ", ".join(self._llmList)))
+            if self._starCoder not in self._starCoderList:
+                raise AttributeError("Invalid class property starCoder, %s must be one of %s" 
+                                     % (type(self._llmName), ", ".join(self._starCoderList)))
                 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._llmName
+        return self._starCoder
 
-    @llmName.setter
-    def llmName(self,llm_name:str):
+    @starCoder.setter
+    def starCoder(self,star_coder:str):
 
-        __s_fn_id__ = f"{self.__name__} function <@llmName.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@starCoder.setter>"
 
         try:
             ''' validate llm name value '''
-            if llm_name.lower() not in self._llmList:
-                raise AttributeError("Invalid class property llm_name, %s must be one of %s" 
-                                     % (type(llm_name), ", ".join(self._llmList)))
+            if star_coder.lower() not in self._starCoderList:
+                raise AttributeError("Invalid class property star_coder, %s must be one of %s" 
+                                     % (type(star_coder), ", ".join(self._starCoderList)))
 
-            self._llmName = llm_name.lower()
+            self._starCoder = llm_name.lower()
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._llmName
+        return self._starCoder
 
     ''' --- TEMPERATURE --- '''
     @property
@@ -260,10 +260,62 @@ class llmWorkLoads():
 
         return self._temperature
 
+    # def patch_litellm(self):
+    #     """
+    #     """
+    #     __s_fn_id__ = f"{self.__name__} function <patch_litellm>"
 
-    def get(
-        self,
-        ):
+    #     try:
+    #         original_get_llm_provider = litellm.get_llm_provider
+    #         logger.debug("%s original_get_llm_provider = %s", 
+    #                      __s_fn_id__, original_get_llm_provider)
+    
+    #         def custom_get_llm_provider(model, *args, **kwargs):
+    #             _model = "/".join([self._provider.lower(), self._starCoder])
+    #             if model == _model:
+    #                 logger.debug("%s creating model: %s", __s_fn_id__, _model)
+    #                 # return ChatOllama(
+    #                 #     model=self._starCoder,
+    #                 #     temperature=self._temperature,
+    #                 #     max_tokens=self._maxTokens,
+    #                 #     max_retries=self._maxReTries,
+    #                 #     base_url=self._baseURL,
+    #                 # )
+    #                 ollama_model_ = ChatOllama(
+    #                     model=_model, #self._starCoder,
+    #                     temperature=self._temperature,
+    #                     max_tokens=self._maxTokens,
+    #                     max_retries=self._maxReTries,
+    #                     base_url=self._baseURL,
+    #                 )
+    #                 if ollama_model_ is None:
+    #                     raise RuntimeError("Failed to create model for:" % _model)
+    #                 logger.debug("%s created ollama_model_= %s", __s_fn_id__, ollama_model_)
+    #                 return ollama_model_
+    #             origin_prov=None
+    #             origin_prov = original_get_llm_provider(model, *args, **kwargs)
+    #             if origin_prov is None:
+    #                 raise ChildProcessError("Failed set origin_prov, returned" 
+    #                                         % type(origin_prov))
+    #             logger.debug("%s Set origin_prov = %s", __s_fn_id__, origin_prov)
+    #             # return original_get_llm_provider(model, *args, **kwargs)
+    #         litellm.get_llm_provider = custom_get_llm_provider
+    #         if not litellm.get_llm_provider:
+    #             raise ChildProcessError("Failed custom_get_llm_provider, returned %s" 
+    #                                     % type(litellm.get_llm_provider))
+    #         # Optionally, return something if needed
+
+    #     except Exception as err:
+    #         logger.error("%s %s \n",__s_fn_id__, err)
+    #         logger.debug(traceback.format_exc())
+    #         print("[Error]"+__s_fn_id__, err)
+    #         return None
+            
+    #     finally:
+    #         logger.debug("%s created %s", __s_fn_id__, self)
+    #         return self
+
+    def get(self):
         """
         """
 
@@ -272,34 +324,57 @@ class llmWorkLoads():
         _ret_model = None
 
         try:
-            if self._provider.upper() == "OLLAMA":
+            _model = "/".join([self._provider.lower(), self._starCoder])
+            if self._provider == "ollama":
                 ''' running locally '''
-                original_get_llm_provider = litellm.get_llm_provider
-                _ret_model = ChatOllama(
-                    model=self._llmName,
+                _ret_model=ChatOllama(
+                    model=_model,#elf._starCoder,
                     temperature=self._temperature,
-                    max_tokens =self._maxTokens,
+                    max_tokens=self._maxTokens,
                     max_retries=self._maxReTries,
                     base_url=self._baseURL,
-                    )
-                # Monkey patch LiteLLM
-                litellm.get_llm_provider = original_get_llm_provider(model)
+                )
+                # original_get_llm_provider = litellm.get_llm_provider
+                # _ret_model = ChatOllama(
+                #     model=self._starCoder,
+                #     temperature=self._temperature,
+                #     max_tokens =self._maxTokens,
+                #     max_retries=self._maxReTries,
+                #     base_url=self._baseURL,
+                #     )
+                # # Monkey patch LiteLLM
+                # litellm.get_llm_provider = custom_get_llm_provider
+                # _ret_model=self.patch_litellm()
 
-            elif self._provider.upper() == "GROQ":
-                _model_name = "/".join([self._provider.lower(), self._llmName])
-                _ret_model = ChatGroq(
+            elif self._provider == "groq":
+                _model_name = "/".join([self._provider.lower(), self._starCoder])
+                # _ret_model = ChatGroq(
+                #     temperature=self._temperature,
+                #     max_tokens =self._maxTokens,
+                #     max_retries=self._maxReTries,
+                #     model_name=_model_name,
+                #     api_key = os.environ.get('GROQ_API_KEY')
+                # )
+                _ret_model=ChatGroq(
                     temperature=self._temperature,
-                    max_tokens =self._maxTokens,
+                    max_tokens=self._maxTokens,
                     max_retries=self._maxReTries,
-                    model_name=_model_name,
-                    api_key = os.environ.get('GROQ_API_KEY')
+                    model_name=_model_name,#self._starCoder,
+                    api_key=os.environ.get("GROQ_API_KEY")
                 )
             else:
-                raise RuntimeError("unrecognized provider" % self._provider)
-            
+                raise RuntimeError(f"Provider {self._provider} not supported in this implementation.")
+
+            ''' check return value '''
+            if _ret_model is None:
+                raise ChildProcessError("Failed to establish a mode, returned %s" % type(_ret_model))
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
+            return None
 
-        return _ret_model
+        finally:
+            logger.debug("%s Succeeded in building model %s", __s_fn_id__, _ret_model)
+            return _ret_model
