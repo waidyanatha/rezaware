@@ -82,10 +82,14 @@ class llmWorkLoads():
         ''' Initialize property var to hold the data '''
         self._provider=provider
         self._provList=[
-            'AZURE',  # microsoft llm
-            'GOOGLE', # google llm
-            'GROQ',   # groc llms
-            'OLLAMA', # ollama local llm
+            'anthropic', # Anthropic llm
+            'azure',  # microsoft llm
+            'gemini', # google llm
+            'groq',   # groc llms
+            'huggingface', # Huggingface
+            'mistral',# mistral llm
+            'ollama', # ollama local llm
+            'openai'
         ]
         self._starCoder = llm_name
         self._starCoderList = [
@@ -334,6 +338,13 @@ class llmWorkLoads():
                     max_retries=self._maxReTries,
                     base_url=self._baseURL,
                 )
+                from rezaware.modules.ml.llm import crewai_ollama_wrapper as wrapper
+                # from rezaware.modules.ml.llm import crewai_wrapper_tool as tool
+                _ret_model = wrapper.CrewAIOllamaWrapper(
+                    ollama_model=_ret_model, 
+                    model_name=_model
+                )
+
                 # original_get_llm_provider = litellm.get_llm_provider
                 # _ret_model = ChatOllama(
                 #     model=self._starCoder,
