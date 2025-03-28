@@ -24,6 +24,7 @@ try:
 #     from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
     from pyspark.sql import DataFrame
     from typing import List, Iterable, Dict, Tuple, Any
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
 
     ''' fixing the problem with sqllite warning '''
     __import__('pysqlite3')
@@ -380,7 +381,7 @@ class dataWorkLoads(attr.properties):
     '''
     @staticmethod
     def text_to_chunks(
-        text:list=None,
+        text:any=None,
         chunk_size:int=1000, 
         overlap:int=200,
         **kwargs
@@ -397,12 +398,37 @@ class dataWorkLoads(attr.properties):
             Folder with no PDFs raises an exception
         """
 
-        __s_fn_id__ = f"{aiWorkLoads.__name__} function <text_to_chunks>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} function <text_to_chunks>"
+
+        __def_splitter__ = "STRING"
+
+        def process_raw_output(raw_output):
+            """Converts CrewAI raw output to string and splits into chunks."""
+            
+            # 1. If the raw output is a dictionary, we need to access the 'text' or other field
+            if isinstance(raw_output, dict):
+                # Example assuming 'tasks_output' contains the text to process
+                text_content = raw_output.get('tasks_output', '')
+            elif isinstance(raw_output, str):
+                # If it's already a string, use it directly
+                text_content = raw_output
+            else:
+                raise ValueError("Unsupported raw output format")
+        
+            # 2. Optionally, you can join multiple parts or extract specific fields as needed
+            # For example, if there are multiple fields (e.g., 'content', 'summary', 'message')
+            # text_content = " ".join([raw_output.get("content", ""), raw_output.get("summary", "")])
+        
+            # 3. Convert to string (if not already a string)
+            if not isinstance(text_content, str):
+                text_content = str(text_content)
+            return text_content
 
         try:
             ''' validate inputs '''
-            if not isinstance(text,list) or len(text)<=0:
-                raise AttributeError("Invalid %s text" % type(text))
+            # if not isinstance(text,list) or len(text)<=0:
+            #     raise AttributeError("Invalid %s text" % type(text))
+            text = process_raw_output(text)
             if not isinstance(chunk_size,int) and chunk_size<=0:
                 raise AttributeError("Invalid chunk_size %d must be > 0; typically 1000")
             if not isinstance(overlap,int) and overlap<0:
@@ -410,11 +436,19 @@ class dataWorkLoads(attr.properties):
             logger.debug("%s Splitting %d text documents into %d chunks with %d overlap", 
                          __s_fn_id__, len(text), chunk_size, overlap)
             ''' split the text '''
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=chunk_size, 
-                chunk_overlap=overlap
-            )
-            chunks = text_splitter.split_documents(text)
+            # chunk_size = 1000  # Define your chunk size based on your requirements
+            if "SPLITTER" not in kwargs.keys() or "".join(kwargs['SPLITTER'].split())=="":
+                kwargs['SPLITTER']=__def_splitter__
+                logger.debug("%s using %s text splitter to make chunks", 
+                             __s_fn_id__, kwargs['SPLITTER'].upper())
+            if kwargs['SPLITTER'].upper()==__def_splitter__:
+                chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+            elif kwargs['SPLITTER'].upper()=="LANGCHAIN":
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=chunk_size, 
+                    chunk_overlap=overlap
+                )
+                chunks = text_splitter.split_documents(text)
             if not isinstance(chunks,list) or len(chunks)<=0:
                 raise RuntimeError("Failed split %d text document" % len(text))
 
