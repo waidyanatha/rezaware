@@ -18,13 +18,12 @@ try:
     import functools
     import traceback
 
-    import findspark
-    findspark.init()
-    from pyspark.sql import functions as F
-#     from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
-    from pyspark.sql import DataFrame
+#     import findspark
+#     findspark.init()
+#     from pyspark.sql import functions as F
+# #     from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
+#     from pyspark.sql import DataFrame
     from typing import List, Iterable, Dict, Tuple, Any
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
 
     ''' fixing the problem with sqllite warning '''
     __import__('pysqlite3')
@@ -33,9 +32,11 @@ try:
     # import pysqlite3
     sys.modules['sqlite3'] = sys.modules["pysqlite3"]
     ''' langchain '''
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain_community.embeddings import OllamaEmbeddings
+    from langchain_core.documents import Document
     # from langchain_community.vectorstores import Chroma
-    # from langchain_chroma import Chroma
+    from langchain_chroma import Chroma
     ''' Chromadb '''
     import chromadb
     from chromadb.config import Settings
@@ -76,7 +77,6 @@ class dataWorkLoads(attr.properties):
         db_type : str = "chromadb", # database type one of self._dbTypeList
         db_root : str = None,   # folder path to all databases and collections
         db_name : str = None,   # the child folder to use on root
-        # db_name : str = None,
         **kwargs, # unused at the moment 
     ):
         """
@@ -104,10 +104,7 @@ class dataWorkLoads(attr.properties):
         self.__desc__ = desc
 
         __s_fn_id__ = f"{self.__name__} function <__init__>"
-
-        ''' Initialize the DB parameters '''
-        self._dbType=db_type
-        
+       
         ''' initiate to load app.cfg data '''
         global logger
         global pkgConf
@@ -142,26 +139,34 @@ class dataWorkLoads(attr.properties):
             appConf = configparser.ConfigParser()
             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
-            # __def_db_dir__ = "vectors"
-            if db_root is None or "".join(db_root.split())=="":
-                # self._dbRoot = os.path.join(
-                #     pkgConf.get("CWDS","DATA"),__def_db_dir__)
-                self._dbRoot = pkgConf.get("CWDS","DATA")
-                # logger.debug("%s setting %s default root path %s",
-                #              __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
-            else:
-                self._dbRoot = db_root
-            logger.debug("%s setting %s root path %s",
-                         __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
-            __def_db_name__ = "vectors"
-            if not isinstance(db_name,str) or "".join(db_root.split())=="":
-                self._dbName = __def_db_name__
+            ''' Initialize the DB parameters '''
+            self.dbType=db_type
+            self.dbName=db_name
+            self.dbRoot=db_root
+            logger.debug("%s setting %s root path %s for database %s",
+                         __s_fn_id__, self._dbType.upper(), 
+                         self._dbRoot.upper(), self._dbName.upper())
+
+            # # __def_db_dir__ = "vectors"
+            # if db_root is None or "".join(db_root.split())=="":
+            #     # self._dbRoot = os.path.join(
+            #     #     pkgConf.get("CWDS","DATA"),__def_db_dir__)
+            #     self._dbRoot = pkgConf.get("CWDS","DATA")
+            #     # logger.debug("%s setting %s default root path %s",
+            #     #              __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
+            # else:
+            #     self._dbRoot = db_root
+            # logger.debug("%s setting %s root path %s",
+            #              __s_fn_id__, self._dbType.upper(), self._dbRoot.upper())
+            # __def_db_name__ = "vectors"
+            # if not isinstance(db_name,str) or "".join(db_root.split())=="":
+            #     self._dbName = __def_db_name__
                 # logger.debug("%s setting %s at default baabase name %s",
                 #              __s_fn_id__, self._dbType.upper(), self._dbName.upper())
-            else:
-                self._dbName = db_name
-            logger.debug("%s setting %s database name %s",
-                         __s_fn_id__, self._dbType.upper(), self._dbName.upper())
+            # else:
+            #     self._dbName = db_name
+            # logger.debug("%s setting %s database name %s",
+            #              __s_fn_id__, self._dbType.upper(), self._dbName.upper())
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
                            self.__module__,
@@ -184,7 +189,7 @@ class dataWorkLoads(attr.properties):
     def store_vectors(
         self,
         documents:list=None, # list of document chunks
-        db_name:str=None,    # optional folder to append to the root
+        # db_name : str =None,    # optional folder to append to the root
         collection:str=None,   # the documents collection name
         embedding_fn:any=None, # embediing function to use
         **kwargs,
@@ -194,7 +199,6 @@ class dataWorkLoads(attr.properties):
             Stores the vector embedding of the documents in the given database and collection
         Attributes :
             documents (list) list of document chunks
-            db_name (str) optional folder to append to the root
             collection (str) the documents collection name
             embedding_fn (any) embediing function to use
         Returns :
@@ -212,42 +216,58 @@ class dataWorkLoads(attr.properties):
             ''' validate inputs and set to defaults '''
             if not isinstance(documents,list) or len(documents)<=0:
                 raise AttributeError("Cannot store embeddings of %s documents" % type(documents))
-            # if not os.path.isdir(db_root):
-            #     db_root = os.path.join(
-            #         pkgConf.get("CWDS","DATA"),__def_db_dir__
-            #     )
-            #     logger.debug("%s setting %s at default path %s", 
-            #                  __s_fn_id__, self._dbType.upper(), 
-            #                  db_root.upper())
-            if isinstance(db_name,str) and "".join(db_name.split())=="":
-                self.dbName = db_name
-            # db_path=self._dbRoot
-            # if isinstance(db_name,str) and "".join(db_name.split())!="":
-            db_path = os.path.join(self._dbRoot,self.dbName)
-            logger.debug("%s extending %s root path %s with %s dbname.",
-                         __s_fn_id__, self._dbRoot, self._dbType.upper(), db_path.upper())
-            if embedding_fn is None:
-                embedding_fn = __def_embedding_fn__
             if not isinstance(collection,str) or "".join(collection.split())=="":
                 raise AttributeError("Unspecified collection name %s; aborting!" 
                                      % type(collection))
+
+            db_path = os.path.join(self._dbRoot,self._dbName)
+            logger.debug("%s extending %s root path %s with %s dbname.",
+                         __s_fn_id__, self._dbRoot.upper(), 
+                         self._dbType.upper(), db_path.upper())
+            if embedding_fn is None:
+                embedding_fn = __def_embedding_fn__
+                logger.debug("%s NoneType embedding_fn set to default %s", 
+                             __s_fn_id__, embedding_fn)
+            else:
+                logger.debug("%s Input embedding_fn set to default", 
+                             __s_fn_id__, embedding_fn)
+            ''' prepare documents and ids '''
+            ids = [str(i+1) for i in range(0,len(documents),1)]
+            logger.debug("%s generated %d ids", 
+                         __s_fn_id__, len(ids))
+
             ''' store vector embeddings in vector database '''
+            _client_settings=None
+            vectorstore = None
             if self.dbType.lower() == 'chromadb':
                 _client_settings = Settings(
                     is_persistent=True,
                     persist_directory=db_path,
                 )
-                vectorstore = Chroma.from_documents(
-                    # persist_directory = db_path,
-                    collection_name=collection,
-                    documents=documents,
-                    embedding=embedding_fn,
+                # vectorstore = Chroma.from_documents(
+                #     # persist_directory = db_path,
+                #     collection_name=collection,
+                #     documents=documents,
+                #     embedding=embedding_fn,
+                #     client_settings = _client_settings,
+                #     )
+                vectorstore = Chroma(
+                    persist_directory=db_path,
+                    collection_name = collection,
+                    embedding_function = embedding_fn,
                     client_settings = _client_settings,
                     )
-                if not isinstance(vectorstore,Chroma):
-                    raise ChildProcessError("Failed to store vector embeddings in %s for %s at %s" 
-                                            % (self._dbType.upper(), collection.upper(), 
-                                               db_path.upper()))
+                logger.debug("%s instantiated %s", __s_fn_id__, vectorstore)
+                ret_ids = []
+                ret_ids=vectorstore.add_documents(documents=documents, ids=ids)
+                # if not isinstance(vectorstore,Chroma):
+                #     raise ChildProcessError("Failed to store vector embeddings in %s for %s at %s" 
+                #                             % (self._dbType.upper(), collection.upper(), 
+                #                                db_path.upper()))
+                if not isinstance(ret_ids,list) or len(ret_ids) != len(ids):
+                    raise ChildProcessError("Failed to store %d documents in %s collection %s at %s"
+                                            % (len(documents), self._dbType.upper(),
+                                               collection.upper(), db_path.upper()))
             else:
                 raise AttributeError("Invalid %s dbType %s" % (self._realm, self._dbType.upper()))
 
@@ -258,10 +278,13 @@ class dataWorkLoads(attr.properties):
             return None
 
         finally:
-            logger.debug("%s created vectorstore with %d documents in %s collection: %s at %s", 
-                             __s_fn_id__, vectorstore._collection.count(), 
-                         self._dbType.upper(), collection.upper(), db_path.upper())
-            return vectorstore
+            # logger.debug("%s created vectorstore with %d documents in %s collection: %s at %s", 
+            #                  __s_fn_id__, vectorstore._collection.count(), 
+            #              self._dbType.upper(), collection.upper(), db_path.upper())
+            logger.debug("%s added %d documents to %s vectorstore collection: %s at %s",
+                         __s_fn_id__, len(ret_ids), self._dbType.upper(), 
+                         collection.upper(), db_path.upper())
+            return ret_ids, vectorstore
 
     ''' Function GET COLLECTIONS
 
@@ -269,7 +292,7 @@ class dataWorkLoads(attr.properties):
     '''
     def get_collections(
         self,
-        db_name:str=None,
+        # db_name:str=None,
         **kwargs,
     )->Any:
         """
@@ -280,12 +303,15 @@ class dataWorkLoads(attr.properties):
         __def_db_dir__ = "vectors"
 
         try:
-            db_path=self._dbRoot
-            if isinstance(db_name,str) and "".join(db_name.split())!="":
-                db_path = os.path.join(self._dbRoot,db_name)
-                logger.debug("%s extending %s path with dbname %s",
-                             __s_fn_id__, self._dbType.upper(), 
-                             db_path.upper())
+            db_path = os.path.join(self._dbRoot,self._dbName)
+            logger.debug("%s extending %s path with %s dbname %s",
+                         __s_fn_id__, self._dbType.upper(), 
+                         self._dbName.upper(), db_path.upper())
+            # if isinstance(db_name,str) and "".join(db_name.split())!="":
+            #     db_path = os.path.join(self._dbRoot,self.dbName)
+            #     logger.debug("%s extending %s path with dbname %s",
+            #                  __s_fn_id__, self._dbType.upper(), 
+            #                  db_path.upper())
             ''' read collection list from dbType '''
             collections = []
             if self._dbType=="chromadb":
@@ -319,7 +345,7 @@ class dataWorkLoads(attr.properties):
     '''
     def read_vectors(
         self,
-        db_name:str=None,
+        # db_name:str=None,
         collection:str=None,
         embedding_fn:any=None,
         **kwargs,
@@ -329,32 +355,38 @@ class dataWorkLoads(attr.properties):
 
         __s_fn_id__ = f"{self.__name__} function <read_vectors>"
 
+        ''' TODO move to __propAttr__ '''
         __def_embedding_fn__=OllamaEmbeddings(model='nomic-embed-text')
 
         try:
             ''' validate inputs and set to defaults '''
-            db_path=self._dbRoot
-            if isinstance(db_name,str) and "".join(db_name.split())!="":
-                db_path = os.path.join(self._dbRoot,db_name)
-                logger.debug("%s extending %s path with dbname %s",
-                             __s_fn_id__, self._dbType.upper(), 
-                             db_path.upper())
+            # db_path=self._dbRoot
+            # if isinstance(db_name,str) and "".join(db_name.split())!="":
             if embedding_fn is None:
                 embedding_fn = __def_embedding_fn__
+                logger.debug("NoneType embedding_fn set to default=%s" % embedding_fn)
+            else:
+                logger.debug("Input embedding_fn set to default=%s" % embedding_fn)
             if not isinstance(collection,str) or "".join(collection.split())=="":
                 raise AttributeError("Unspecified collection name %s; aborting!" 
                                      % type(collection))
+            db_path = os.path.join(self._dbRoot,self._dbName)
+            logger.debug("%s extending %s path with %s dbname %s",
+                         __s_fn_id__, self._dbType.upper(), 
+                         self._dbName.upper(), db_path.upper())
             ''' store vector embeddings in vector database '''
+            _client_settings=None
+            vectorstore = None
             if self.dbType.lower() == 'chromadb':
                 _client_settings = Settings(
                     is_persistent=True,
                     persist_directory=db_path,
                 )
                 vectorstore = Chroma(
-                    persist_directory = db_path,
-                    collection_name=collection,
+                    persist_directory=db_path,
+                    collection_name = collection,
                     embedding_function=embedding_fn,
-                    client_settings=_client_settings
+                    client_settings = _client_settings
                     )
                 if not isinstance(vectorstore,Chroma):
                     raise ChildProcessError("Failed to read %s vector embeddings collection %s at %s" 
@@ -379,8 +411,9 @@ class dataWorkLoads(attr.properties):
 
         authors: <nuwan@soulfish.lk>
     '''
+    # def text_to_chunks(
     @staticmethod
-    def text_to_chunks(
+    def text_to_documents(
         text:any=None,
         chunk_size:int=1000, 
         overlap:int=200,
@@ -398,7 +431,7 @@ class dataWorkLoads(attr.properties):
             Folder with no PDFs raises an exception
         """
 
-        __s_fn_id__ = f"{dataWorkLoads.__name__} function <text_to_chunks>"
+        __s_fn_id__ = f"{dataWorkLoads.__name__} function <text_to_documents>"
 
         __def_splitter__ = "STRING"
 
@@ -441,15 +474,33 @@ class dataWorkLoads(attr.properties):
                 kwargs['SPLITTER']=__def_splitter__
                 logger.debug("%s using %s text splitter to make chunks", 
                              __s_fn_id__, kwargs['SPLITTER'].upper())
+            ''' set default metadata if not exists '''
+            if not "METADATA" in kwargs.keys() or "".join(kwargs['METADATA'].split())=="":
+                kwargs['METADATA'] = {
+                    "chunk size":chunk_size,
+                    "overlap" : overlap,
+                }
+            ''' create documents '''
             if kwargs['SPLITTER'].upper()==__def_splitter__:
                 chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+                # List to store Document objects
+                documents = []
+                # Iterate over the chunks and create Document objects
+                for chunk in chunks:
+                    doc = Document(page_content=chunk, metadata=kwargs['METADATA'])
+                    documents.append(doc)
+                
             elif kwargs['SPLITTER'].upper()=="LANGCHAIN":
+                text = [Document(page_content=text, metadata=kwargs['METADATA'])]
                 text_splitter = RecursiveCharacterTextSplitter(
                     chunk_size=chunk_size, 
                     chunk_overlap=overlap
                 )
-                chunks = text_splitter.split_documents(text)
-            if not isinstance(chunks,list) or len(chunks)<=0:
+                # chunks = text_splitter.split_documents(text)
+                documents = text_splitter.split_documents(text)
+            # if not isinstance(chunks,list) or len(chunks)<=0:
+            #     raise RuntimeError("Failed split %d text document" % len(text))
+            if not isinstance(documents,list) or len(documents)<=0:
                 raise RuntimeError("Failed split %d text document" % len(text))
 
         except Exception as err:
@@ -459,8 +510,11 @@ class dataWorkLoads(attr.properties):
             return None
 
         finally:
-            logger.info("%s Split %d document into %d chunks", __s_fn_id__, len(text), len(chunks))
-            return chunks
+            # logger.info("%s Split %d document into %d chunks", __s_fn_id__, len(text), len(chunks))
+            # return chunks
+            logger.info("%s Split length %d text into %d chunks", 
+                        __s_fn_id__, len(text), len(documents))
+            return documents
 
     # Function to load and process web content
     def load_and_process_url(self,url):

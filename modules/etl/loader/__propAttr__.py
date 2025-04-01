@@ -112,16 +112,21 @@ class properties():
         ]   # list of data types to convert content to
         ''' --- Common DB properties --- '''
         self._dbType = db_type
+        self._dbName = None
+        self._dbRoot = None
+        ''' --- Connection properties --- '''
         self._dbHostIP=None
         self._dbPort = None
         self._dbUser = None
         self._dbPswd = None
-        self._collections = None
         self._connect = None
-        self._documents = None        
         ''' --- SPARK properties --- '''
         self._sparkMaster =  None
         self._master = None
+        ''' NOSQL DB properties '''
+        self._collections = None
+        self._documents = None        
+
         ''' RDBM DB properties '''
         self._dbConnURL = None # merge with self._connect
         self._homeDir = None
@@ -167,43 +172,10 @@ class properties():
             logger.info("%s Class",self.__name__)
 
             ''' Set the wrangler root directory '''
-#             self.pckgDir = pkgConf.get("CWDS",self.__package__)
             self._appDir = pkgConf.get("CWDS",self.__app__)
             ''' get the path to the input and output data '''
-#             self.dataDir = pkgConf.get("CWDS","DATA")
             appConf = configparser.ConfigParser()
             appConf.read(os.path.join(self._appDir, self.__conf_fname__))
-
-#             ''' import spark RDBM work load utils to read and write data '''
-#             from rezaware.modules.etl.loader import sparkRDBM as db
-#             self._clsSDB = db.dataWorkLoads(
-#                 desc=self.__desc__,
-#                 db_type = self.dbType,
-#                 db_name = self.dbName,
-#                 db_schema=self.dbSchema,
-#                 db_user = self.dbUser,
-#                 db_pswd = self.dbPswd,
-#                 spark_save_mode='append',
-#             )
-#             ''' import spark nosql work load utils to read and write data '''
-#             from rezaware.modules.etl.loader import sparkNoSQL as nosql
-#             self._clsNoSQL = nosql.dataWorkLoads(
-#                 db_type = self.dbType, # database type postgres (preferred), mysql, etc
-#                 db_name = self.dbName,
-#                 db_format=self.dbFormat,
-#                 db_user = self.dbUser,
-#                 db_pswd = self.dbPswd,
-#                 db_auth_source = self.dbAuthSource,
-#                 db_auth_mechanism=self.dbAuthMechanism,
-#                 desc=self.__desc__
-#                 **kwargs,
-#             )
-#             ''' import spark time-series work load utils for rolling mean/variance computations '''
-#             from rezaware.modules.ml.timeseries import rollingstats as stats
-#             self._clsStats = stats.RollingStats(desc=self.__desc__)
-#             ''' import assset performance index class '''
-#             from mining.modules.finance.analysis import technical as indx
-#             self._clsIndx =indx.AssetMovement(desc=self.__desc__)
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
@@ -454,11 +426,13 @@ class properties():
         __s_fn_id__ = f"{self.__name__} function <@dbName.setter>"
 
         try:
-            if db_name is not None and "".join(db_name.split())!="":
-                self._dbName = db_name
-                logger.debug("%s set class @property dbName to %s",__s_fn_id__,self._dbName.upper())
-            else:
+            # if db_name is not None and "".join(db_name.split())!="":
+            #     self._dbName = db_name
+            #     logger.debug("%s set class @property dbName to %s",__s_fn_id__,self._dbName.upper())
+            if not isinstance(db_name, str) or "".join(db_name.split())=="":
                 raise ConnectionError("Undefined dbName; set in app.cfg or as class property")
+            self._dbName = db_name
+            logger.debug("%s set class @property dbName to %s",__s_fn_id__,self._dbName.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -466,6 +440,48 @@ class properties():
             print("[Error]"+__s_fn_id__, err)
 
         return self._dbName
+
+    ''' DB ROOT '''
+    @property
+    def dbRoot(self) -> str:
+
+        __s_fn_id__ = f"{self.__name__} function <@property dbRoot>"
+
+        try:
+            ''' read from app.cfg '''
+            if self._dbRoot is None and appConf.has_option(self.realm,'DBROOT'):
+                self._dbRoot = appConf.get(self._realm,'DBROOT')
+
+            logger.warning("%s set %s class @property dbRoot to %s",
+                           __s_fn_id__, self._realm.upper(), self._dbRoot.upper())
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        finally:
+            return self._dbRoot
+
+    @dbRoot.setter
+    def dbRoot(self,db_root:str) -> str:
+
+        __s_fn_id__ = f"{self.__name__} function <@dbRoot.setter>"
+
+        try:
+            if not isinstance(db_root, str) or "".join(db_root.split())=="":
+                raise ConnectionError("Invalid class property dbRoot; set in app.cfg or as class property")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+            return None
+
+        finally:
+            self._dbRoot = db_root
+            logger.debug("%s set class @property dbRoot to %s",__s_fn_id__,self._dbRoot.upper())
+            return self._dbRoot
 
     ''' --- SCHEMA --- '''
     @property
